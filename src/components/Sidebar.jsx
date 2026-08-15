@@ -1,68 +1,56 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import './Sidebar.css';
 
 export default function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false);
+
   const menuItems = [
     { path: '/Dashboard', label: '📊 Overview' },
     { path: '/Fleet', label: '🚚 Fleet Status' },
     { path: '/Maintenance', label: '🔧 Repairs & Service' },
     { path: '/Drivers', label: '👨‍✈️ Drivers' },
     { path: '/Fuel', label: '⛽ Fuel Logs' },
-    // { path: '/Logout', label: '🚪 Logout' },
   ];
 
   return (
-    <aside style={styles.sidebar}>
-      <div style={styles.logo}>
-        <h2>TruckERP</h2>
-      </div>
+    <>
+      {/* Mobile Hamburger */}
+      <button
+        className="mobile-menu-btn"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        ☰
+      </button>
 
-      <nav style={styles.nav}>
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            style={({ isActive }) => ({
-              ...styles.link,
-              backgroundColor: isActive ? '#1a73e8' : 'transparent',
-              color: isActive ? '#ffffff' : '#b0bec5',
-            })}
-          >
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
-    </aside>
+      {/* Overlay */}
+      {isOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsOpen(false)}
+        ></div>
+      )}
+
+      <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+        <div className="logo">
+          <h2>TruckERP</h2>
+        </div>
+
+        <nav className="nav">
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? 'active' : ''}`
+              }
+              onClick={() => setIsOpen(false)}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 }
-
-const styles = {
-  sidebar: {
-    width: '260px',
-    backgroundColor: '#1e293b',
-    color: '#fff',
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100vh',
-  },
-
-  logo: {
-    padding: '20px',
-    textAlign: 'center',
-    borderBottom: '1px solid #334155',
-  },
-
-  nav: {
-    display: 'flex',
-    flexDirection: 'column',
-    padding: '16px 8px',
-    gap: '8px',
-  },
-
-  link: {
-    padding: '12px 16px',
-    borderRadius: '6px',
-    textDecoration: 'none',
-    fontWeight: '500',
-    transition: 'background-color 0.2s',
-  },
-};
