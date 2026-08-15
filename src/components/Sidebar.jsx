@@ -6,7 +6,7 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { path: '/Dashboard', label: '📊 Overview' },
+    { path: '/Dashboard', label: '📊 Dashboard' },
     { path: '/Fleet', label: '🚚 Fleet Status' },
     { path: '/Maintenance', label: '🔧 Repairs & Service' },
     { path: '/Drivers', label: '👨‍✈️ Drivers' },
