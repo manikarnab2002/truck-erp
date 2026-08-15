@@ -34,7 +34,7 @@ export default function AppRoutes() {
     <Routes>
         <Route path="login" element={<Login />} />
       <Route path="/" element={<Layout />}>
-        <Route index element={<Overview />} />
+        <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="fleet" element={<Fleet />} />
         <Route path="maintenance" element={<Maintenance />} />
