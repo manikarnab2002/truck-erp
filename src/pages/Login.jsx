@@ -1,33 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, ShieldCheck, RefreshCw, LogIn } from 'lucide-react';
+
+const VALID_USER_ID = 'saikat@gmail.com';
+const VALID_PASSWORD = 'Saikat@2002#';
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_ATTEMPTS_KEY = 'truckErpLoginAttempts';
+const SESSION_KEY = 'truckErpSession';
+
+const createCaptchaCode = () => {
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
 
 export default function Login() {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
-  const [captchaCode, setCaptchaCode] = useState('');
+  const [captchaCode, setCaptchaCode] = useState(createCaptchaCode);
   const [errorMessage, setErrorMessage] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(() =>
+    Number(sessionStorage.getItem(LOGIN_ATTEMPTS_KEY) || 0)
+  );
   const navigate = useNavigate();
 
   // Generate a random 6-character alphanumeric CAPTCHA
   const generateCaptcha = () => {
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setCaptchaCode(code);
+    setCaptchaCode(createCaptchaCode());
     setCaptchaInput('');
     setErrorMessage('');
   };
 
-  useEffect(() => {
-    generateCaptcha();
-  }, []);
+  const registerFailedAttempt = () => {
+    const attempts = failedAttempts + 1;
+    sessionStorage.setItem(LOGIN_ATTEMPTS_KEY, String(attempts));
+    setFailedAttempts(attempts);
+  };
 
   const handleLogin = (e) => {
     e.preventDefault();
+
+    if (failedAttempts >= MAX_LOGIN_ATTEMPTS) {
+      setErrorMessage('Too many failed attempts. Login is temporarily blocked.');
+      return;
+    }
 
     if (!userId.trim()) {
       setErrorMessage('Please enter your User ID.');
@@ -41,15 +61,27 @@ export default function Login() {
 
     if (captchaInput !== captchaCode) {
       setErrorMessage('Invalid CAPTCHA code. Please try again.');
+      registerFailedAttempt();
       generateCaptcha();
       return;
     }
 
-    // Save session state
-    localStorage.setItem('authToken', 'sample_jwt_token');
-    
-    // Redirect to home dashboard
-    navigate('/');
+    if (
+      userId.trim().toLowerCase() !== VALID_USER_ID ||
+      password !== VALID_PASSWORD
+    ) {
+      registerFailedAttempt();
+      setErrorMessage('Invalid User ID or password.');
+      generateCaptcha();
+      return;
+    }
+
+    sessionStorage.removeItem(LOGIN_ATTEMPTS_KEY);
+    sessionStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ userId: VALID_USER_ID })
+    );
+    navigate('/dashboard');
   };
 
   return (

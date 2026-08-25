@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Fleet from './pages/Fleet';
@@ -31,11 +31,17 @@ const Maintenance1 = () => (
   </div>
 );
 
+function ProtectedLayout() {
+  const session = sessionStorage.getItem('truckErpSession');
+
+  return session ? <Layout /> : <Navigate to="/login" replace />;
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
         <Route path="login" element={<Login />} />
-      <Route path="/" element={<Layout />}>
+      <Route path="/" element={<ProtectedLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="daily-delivery" element={<DailyDelivery />} />

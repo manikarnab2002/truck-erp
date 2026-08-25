@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AddTruckModal from '../components/AddTruckModal';
 import { 
   Search, 
@@ -9,27 +9,60 @@ import {
   Clock 
 } from 'lucide-react';
 
-const initialFleetData = [
-  { id: 'TRK-101', regNo: 'WB-19-AX-4021', model: 'Tata Signa 5530.S', type: 'Trailer', driver: 'Rajesh Kumar', mileage: '142,500 km', lastService: '2026-07-15', status: 'Active' },
-  { id: 'TRK-102', regNo: 'WB-23-C-8812', model: 'Ashok Leyland 2820', type: 'Haulage', driver: 'Suresh Raina', mileage: '98,200 km', lastService: '2026-08-01', status: 'In Service' },
-  { id: 'TRK-103', regNo: 'MH-12-Q-5510', model: 'BharatBenz 3523R', type: 'Tipper', driver: 'Amit Singh', mileage: '210,000 km', lastService: '2026-06-20', status: 'Active' },
-  { id: 'TRK-104', regNo: 'DL-01-AB-9001', model: 'Mahindra Blazo X', type: 'Container', driver: 'Vikas Verma', mileage: '65,400 km', lastService: '2026-08-10', status: 'Idle' },
-  { id: 'TRK-105', regNo: 'KA-04-E-1122', model: 'Tata Prima 4928.S', type: 'Trailer', driver: 'Dinesh Karthik', mileage: '185,900 km', lastService: '2026-05-12', status: 'Breakdown' },
-  { id: 'TRK-106', regNo: 'WB-02-KL-3344', model: 'Eicher Pro 6028', type: 'Haulage', driver: 'Manoj Tiwari', mileage: '45,100 km', lastService: '2026-07-28', status: 'Active' },
-];
-
 export default function Fleet() {
-  const [fleetList, setFleetList] = useState(initialFleetData);
+  const [fleetList, setFleetList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleAddTruck = (newTruck) => {
-    setFleetList((prev) => [newTruck, ...prev]);
+  useEffect(() => {
+    loadTrucks();
+  }, []);
+
+  const loadTrucks = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/trucks');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to load trucks.');
+      setFleetList(data);
+    } catch (error) {
+      console.error('Load trucks error:', error);
+      alert('Unable to load trucks. Please check your backend and MongoDB connection.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    setFleetList((prev) => prev.filter((truck) => truck.id !== id));
+  const handleAddTruck = async (newTruck) => {
+    const response = await fetch('http://localhost:5000/api/trucks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTruck),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      alert(result.message || 'Failed to add truck.');
+      return false;
+    }
+
+    setFleetList((prev) => [result.data, ...prev]);
+    return true;
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/trucks/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Failed to delete truck.');
+      setFleetList((prev) => prev.filter((truck) => truck.id !== id));
+    } catch (error) {
+      console.error('Delete truck error:', error);
+      alert(error.message || 'Unable to delete truck.');
+    }
   };
 
   const filteredFleet = fleetList.filter((truck) => {
@@ -88,7 +121,9 @@ export default function Fleet() {
             </tr>
           </thead>
           <tbody>
-            {filteredFleet.length > 0 ? (
+            {loading ? (
+              <tr><td colSpan="5" style={{ ...styles.td, textAlign: 'center' }}>Loading trucks...</td></tr>
+            ) : filteredFleet.length > 0 ? (
               filteredFleet.map((truck) => (
                 <tr key={truck.id} style={styles.tr}>
                   <td style={styles.td}><strong>{truck.id}</strong></td>

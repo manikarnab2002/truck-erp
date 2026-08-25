@@ -22,27 +22,23 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.truckNo || !formData.liters || !formData.totalCost) {
       alert('Please fill in required fields (Truck Registration, Liters, and Total Cost).');
       return;
     }
 
-    const newLog = {
-      id: `FL-${Math.floor(900 + Math.random() * 100)}`,
-      ...formData,
-      liters: `${formData.liters} L`,
-      totalCost: `₹${Number(formData.totalCost).toLocaleString('en-IN')}`,
-      odometer: formData.odometer ? `${Number(formData.odometer).toLocaleString()} km` : 'N/A',
-      date: formData.date || new Date().toISOString().split('T')[0],
-      station: formData.station || 'Local Station',
-      driver: formData.driver || 'Unassigned',
-    };
-
-    onAddFuelLog(newLog);
-    setFormData(initialFormState);
-    onClose();
+    try {
+      const saved = await onAddFuelLog(formData);
+      if (saved) {
+        setFormData(initialFormState);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Add fuel log error:', error);
+      alert('Unable to save fuel log.');
+    }
   };
 
   return (

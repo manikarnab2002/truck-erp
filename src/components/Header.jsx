@@ -10,6 +10,8 @@ export default function Header() {
   const handleLogout = () => {
     // 1. Clear session tokens or storage if applicable
     localStorage.removeItem('authToken');
+    sessionStorage.removeItem('truckErpSession');
+    sessionStorage.removeItem('truckErpLoginAttempts');
     sessionStorage.clear();
 
     // 2. Redirect user to login route

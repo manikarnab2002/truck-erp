@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import FormGroup from "../components/FormGroup";
 import {
   Truck,
   MapPin,
@@ -41,6 +42,30 @@ export default function DailyDelivery() {
 
   const [saved, setSaved] = useState(false);
 
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDeliveries();
+  }, []);
+
+  const loadDeliveries = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/deliveries");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load deliveries.");
+      }
+
+      setDeliveries(data);
+    } catch (error) {
+      console.error("Load deliveries error:", error);
+      alert("Unable to load delivery records. Please check your backend connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -74,31 +99,47 @@ export default function DailyDelivery() {
   };
 
   // Save delivery
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const newDelivery = {
-      ...formData,
-      id: `DEL-${Date.now()}`,
-    };
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/deliveries",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
-    setDeliveries((prev) => [
-      newDelivery,
-      ...prev,
-    ]);
+      const result = await response.json();
 
-    setSaved(true);
+      if (!response.ok) {
+        alert(
+          result.message ||
+          "Unable to save delivery"
+        );
+        return;
+      }
 
-    // Reset form
-    setFormData(emptyForm);
+      setDeliveries((prev) => [result.data, ...prev]);
 
-    setTimeout(() => {
-      setSaved(false);
-    }, 3000);
+      setSaved(true);
+      setFormData(emptyForm);
+
+      setTimeout(() => {
+        setSaved(false);
+      }, 3000);
+    } catch (error) {
+      console.error(error);
+      alert("Unable to connect to server");
+    }
   };
 
   // Delete delivery
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this delivery record?"
     );
@@ -107,9 +148,22 @@ export default function DailyDelivery() {
       return;
     }
 
-    setDeliveries((prev) =>
-      prev.filter((delivery) => delivery.id !== id)
-    );
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/deliveries?id=${encodeURIComponent(id)}`,
+        { method: "DELETE" }
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Unable to delete delivery.");
+      }
+
+      setDeliveries((prev) => prev.filter((delivery) => delivery._id !== id));
+    } catch (error) {
+      console.error("Delete delivery error:", error);
+      alert(error.message || "Unable to delete delivery.");
+    }
   };
 
   // Reset form
@@ -786,52 +840,27 @@ export default function DailyDelivery() {
 
       </form>
 
-
-      {/* ================= SAVED RECORDS ================= */}
-
       <div style={styles.recordsCard}>
-
         <div style={styles.recordsHeader}>
-
           <div>
-
-            <h2 style={styles.recordsTitle}>
-              Daily Delivery Records
-            </h2>
-
+            <h2 style={styles.recordsTitle}>Daily Delivery Records</h2>
             <p style={styles.recordsSubtitle}>
               View all delivery records added today.
             </p>
-
           </div>
-
-          <div style={styles.recordCount}>
-            {deliveries.length} Records
-          </div>
-
+          <div style={styles.recordCount}>{deliveries.length} Records</div>
         </div>
 
-
-        {deliveries.length === 0 ? (
-
+        {loading ? (
+          <div style={styles.emptyState}>Loading delivery records...</div>
+        ) : deliveries.length === 0 ? (
           <div style={styles.emptyState}>
-
-            <Truck
-              size={38}
-              color="#94a3b8"
-            />
-
-            <h3>
-              No Delivery Records
-            </h3>
-
+            <Truck size={38} color="#94a3b8" />
+            <h3>No Delivery Records</h3>
             <p>
-              Add your first daily truck delivery using
-              the form above.
+              Add your first daily truck delivery using the form above.
             </p>
-
           </div>
-
         ) : (
 
           <div style={styles.tableWrapper}>
@@ -896,7 +925,7 @@ export default function DailyDelivery() {
                 {deliveries.map((delivery) => (
 
                   <tr
-                    key={delivery.id}
+                    key={delivery._id}
                     style={styles.tr}
                   >
 
@@ -1036,7 +1065,7 @@ export default function DailyDelivery() {
                       <button
                         type="button"
                         onClick={() =>
-                          handleDelete(delivery.id)
+                          handleDelete(delivery._id)
                         }
                         style={styles.deleteBtn}
                         title="Delete Record"
@@ -1063,46 +1092,6 @@ export default function DailyDelivery() {
       </div>
 
     </div>
-  );
-}
-
-
-/* ================= FORM GROUP ================= */
-
-function FormGroup({
-  label,
-  required,
-  children,
-  fullWidth = false,
-}) {
-
-  return (
-
-    <div
-      style={{
-        ...styles.formGroup,
-        ...(fullWidth
-          ? styles.fullWidth
-          : {}),
-      }}
-    >
-
-      <label style={styles.label}>
-
-        {label}
-
-        {required && (
-          <span style={styles.required}>
-            *
-          </span>
-        )}
-
-      </label>
-
-      {children}
-
-    </div>
-
   );
 }
 

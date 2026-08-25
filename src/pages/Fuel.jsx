@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AddFuelModal from '../components/AddFuelModal';
 import { 
   Fuel as FuelIcon, 
@@ -11,24 +11,59 @@ import {
   MoreVertical 
 } from 'lucide-react';
 
-const initialFuelLogs = [
-  { id: 'FL-901', truckNo: 'WB-19-AX-4021', driver: 'Rajesh Kumar', liters: '180 L', totalCost: '₹16,200', odometer: '142,500 km', mileage: '3.8 km/L', date: '2026-08-11', station: 'HP Auto Care' },
-  { id: 'FL-902', truckNo: 'WB-23-C-8812', driver: 'Suresh Raina', liters: '210 L', totalCost: '₹18,900', odometer: '98,200 km', mileage: '4.1 km/L', date: '2026-08-10', station: 'Indian Oil Bidhannagar' },
-  { id: 'FL-903', truckNo: 'MH-12-Q-5510', driver: 'Amit Singh', liters: '150 L', totalCost: '₹13,500', odometer: '210,000 km', mileage: '3.5 km/L', date: '2026-08-09', station: 'Bharat Petroleum Highway' },
-  { id: 'FL-904', truckNo: 'DL-01-AB-9001', driver: 'Vikas Verma', liters: '120 L', totalCost: '₹10,800', odometer: '65,400 km', mileage: '4.5 km/L', date: '2026-08-08', station: 'Reliance Petroleum' },
-];
-
 export default function Fuel() {
-  const [fuelLogs, setFuelLogs] = useState(initialFuelLogs);
+  const [fuelLogs, setFuelLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleAddFuelLog = (newLog) => {
-    setFuelLogs((prev) => [newLog, ...prev]);
+  useEffect(() => {
+    loadFuelLogs();
+  }, []);
+
+  const loadFuelLogs = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/fuel');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to load fuel logs.');
+      setFuelLogs(data);
+    } catch (error) {
+      console.error('Load fuel logs error:', error);
+      alert('Unable to load fuel logs. Please check your backend and MongoDB connection.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    setFuelLogs((prev) => prev.filter((log) => log.id !== id));
+  const handleAddFuelLog = async (newLog) => {
+    const response = await fetch('http://localhost:5000/api/fuel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLog),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      alert(result.message || 'Failed to add fuel log.');
+      return false;
+    }
+
+    setFuelLogs((prev) => [result.data, ...prev]);
+    return true;
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/fuel/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Failed to delete fuel log.');
+      setFuelLogs((prev) => prev.filter((log) => log.id !== id));
+    } catch (error) {
+      console.error('Delete fuel log error:', error);
+      alert(error.message || 'Unable to delete fuel log.');
+    }
   };
 
   const filteredLogs = fuelLogs.filter((log) => {
@@ -85,7 +120,9 @@ export default function Fuel() {
             </tr>
           </thead>
           <tbody>
-            {filteredLogs.length > 0 ? (
+            {loading ? (
+              <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center' }}>Loading fuel logs...</td></tr>
+            ) : filteredLogs.length > 0 ? (
               filteredLogs.map((log) => (
                 <tr key={log.id} style={styles.tr}>
                   <td style={styles.td}><strong>{log.id}</strong></td>

@@ -21,22 +21,23 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.regNo || !formData.model) {
       alert('Please fill in required fields (Registration Number and Model).');
       return;
     }
 
-    const newTruck = {
-      id: `TRK-${Math.floor(100 + Math.random() * 900)}`,
-      ...formData,
-      mileage: formData.mileage ? `${Number(formData.mileage).toLocaleString()} km` : '0 km',
-    };
-
-    onAddTruck(newTruck);
-    setFormData(initialFormState);
-    onClose();
+    try {
+      const saved = await onAddTruck(formData);
+      if (saved) {
+        setFormData(initialFormState);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Add truck error:', error);
+      alert('Unable to save truck.');
+    }
   };
 
   return (
