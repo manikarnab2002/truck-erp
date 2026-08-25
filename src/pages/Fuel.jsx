@@ -27,6 +27,10 @@ export default function Fuel() {
     setFuelLogs((prev) => [newLog, ...prev]);
   };
 
+  const handleDelete = (id) => {
+    setFuelLogs((prev) => prev.filter((log) => log.id !== id));
+  };
+
   const filteredLogs = fuelLogs.filter((log) => {
     return (
       log.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -55,50 +59,6 @@ export default function Fuel() {
         onAddFuelLog={handleAddFuelLog}
       />
 
-      <div style={styles.statsGrid}>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Total Diesel Consumed</span>
-            <FuelIcon size={18} color="#1e293b" />
-          </div>
-          <div style={styles.cardValue}>
-            {fuelLogs.reduce((acc, curr) => acc + (parseFloat(curr.liters) || 0), 0)} L
-          </div>
-          <p style={styles.cardSub}>Recorded Refills</p>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Total Fuel Expense</span>
-            <DollarSign size={18} color="#10b981" />
-          </div>
-          <div style={styles.cardValue}>
-            ₹{fuelLogs
-              .reduce((acc, curr) => acc + (parseInt(curr.totalCost.replace(/[^0-9]/g, '')) || 0), 0)
-              .toLocaleString('en-IN')}
-          </div>
-          <p style={{ ...styles.cardSub, color: '#10b981' }}>Current Log Period</p>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Avg Fleet Economy</span>
-            <Gauge size={18} color="#3b82f6" />
-          </div>
-          <div style={styles.cardValue}>4.0 km/L</div>
-          <p style={{ ...styles.cardSub, color: '#3b82f6' }}>Optimal Range</p>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Log Entries</span>
-            <TrendingUp size={18} color="#f59e0b" />
-          </div>
-          <div style={styles.cardValue}>{fuelLogs.length}</div>
-          <p style={styles.cardSub}>Verified Refuel Receipts</p>
-        </div>
-      </div>
-
       <div style={styles.filterCard}>
         <div style={styles.searchBox}>
           <Search size={16} color="#64748b" />
@@ -118,13 +78,9 @@ export default function Fuel() {
             <tr>
               <th style={styles.th}>Log ID</th>
               <th style={styles.th}>Truck Reg No</th>
-              <th style={styles.th}>Driver Name</th>
               <th style={styles.th}>Quantity (Liters)</th>
               <th style={styles.th}>Total Cost</th>
-              <th style={styles.th}>Odometer Reading</th>
-              <th style={styles.th}>Fuel Mileage</th>
               <th style={styles.th}>Date</th>
-              <th style={styles.th}>Filling Station</th>
               <th style={styles.th}>Action</th>
             </tr>
           </thead>
@@ -134,25 +90,22 @@ export default function Fuel() {
                 <tr key={log.id} style={styles.tr}>
                   <td style={styles.td}><strong>{log.id}</strong></td>
                   <td style={styles.td}>{log.truckNo}</td>
-                  <td style={styles.td}>{log.driver}</td>
                   <td style={styles.td}>{log.liters}</td>
                   <td style={styles.td}><strong>{log.totalCost}</strong></td>
-                  <td style={styles.td}>{log.odometer}</td>
-                  <td style={styles.td}>
-                    <span style={styles.badge}>{log.mileage}</span>
-                  </td>
                   <td style={styles.td}>{log.date}</td>
-                  <td style={styles.td}>{log.station}</td>
                   <td style={styles.td}>
-                    <button style={styles.actionBtn}>
-                      <MoreVertical size={16} color="#64748b" />
+                    <button
+                      style={{ ...styles.actionBtn, color: '#ef4444', fontWeight: '600' }}
+                      onClick={() => handleDelete(log.id)}
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="10" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '24px' }}>
+                <td colSpan="6" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '24px' }}>
                   No matching fuel logs found.
                 </td>
               </tr>

@@ -3,8 +3,6 @@ import AddTruckModal from '../components/AddTruckModal';
 import { 
   Search, 
   Plus, 
-  Filter, 
-  MoreVertical, 
   Truck, 
   AlertCircle, 
   CheckCircle2, 
@@ -30,6 +28,10 @@ export default function Fleet() {
     setFleetList((prev) => [newTruck, ...prev]);
   };
 
+  const handleDelete = (id) => {
+    setFleetList((prev) => prev.filter((truck) => truck.id !== id));
+  };
+
   const filteredFleet = fleetList.filter((truck) => {
     const matchesSearch = 
       truck.regNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -41,21 +43,6 @@ export default function Fleet() {
 
     return matchesSearch && matchesStatus;
   });
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'Active':
-        return { bg: '#dcfce7', text: '#15803d', icon: <CheckCircle2 size={12} /> };
-      case 'In Service':
-        return { bg: '#fef3c7', text: '#b45309', icon: <Clock size={12} /> };
-      case 'Idle':
-        return { bg: '#f1f5f9', text: '#475569', icon: <Truck size={12} /> };
-      case 'Breakdown':
-        return { bg: '#fee2e2', text: '#b91c1c', icon: <AlertCircle size={12} /> };
-      default:
-        return { bg: '#f1f5f9', text: '#475569', icon: null };
-    }
-  };
 
   return (
     <div style={styles.container}>
@@ -87,21 +74,6 @@ export default function Fleet() {
             style={styles.searchInput}
           />
         </div>
-
-        <div style={styles.filterGroup}>
-          <Filter size={16} color="#64748b" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={styles.select}
-          >
-            <option value="All">All Statuses</option>
-            <option value="Active">Active</option>
-            <option value="In Service">In Service</option>
-            <option value="Idle">Idle</option>
-            <option value="Breakdown">Breakdown</option>
-          </select>
-        </div>
       </div>
 
       <div style={styles.tableCard}>
@@ -112,47 +84,30 @@ export default function Fleet() {
               <th style={styles.th}>Reg Number</th>
               <th style={styles.th}>Vehicle Model</th>
               <th style={styles.th}>Type</th>
-              <th style={styles.th}>Assigned Driver</th>
-              <th style={styles.th}>Mileage</th>
-              <th style={styles.th}>Last Service</th>
-              <th style={styles.th}>Status</th>
               <th style={styles.th}>Action</th>
             </tr>
           </thead>
           <tbody>
             {filteredFleet.length > 0 ? (
-              filteredFleet.map((truck) => {
-                const badge = getStatusBadge(truck.status);
-                return (
-                  <tr key={truck.id} style={styles.tr}>
-                    <td style={styles.td}><strong>{truck.id}</strong></td>
-                    <td style={styles.td}>{truck.regNo}</td>
-                    <td style={styles.td}>{truck.model}</td>
-                    <td style={styles.td}>{truck.type}</td>
-                    <td style={styles.td}>{truck.driver || 'Unassigned'}</td>
-                    <td style={styles.td}>{truck.mileage}</td>
-                    <td style={styles.td}>{truck.lastService || 'N/A'}</td>
-                    <td style={styles.td}>
-                      <span style={{
-                        ...styles.badge,
-                        backgroundColor: badge.bg,
-                        color: badge.text,
-                      }}>
-                        {badge.icon}
-                        <span>{truck.status}</span>
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <button style={styles.actionBtn}>
-                        <MoreVertical size={16} color="#64748b" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+              filteredFleet.map((truck) => (
+                <tr key={truck.id} style={styles.tr}>
+                  <td style={styles.td}><strong>{truck.id}</strong></td>
+                  <td style={styles.td}>{truck.regNo}</td>
+                  <td style={styles.td}>{truck.model}</td>
+                  <td style={styles.td}>{truck.type}</td>
+                  <td style={styles.td}>
+                    <button
+                      style={{ ...styles.actionBtn, color: '#ef4444', fontWeight: '600' }}
+                      onClick={() => handleDelete(truck.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
             ) : (
               <tr>
-                <td colSpan="9" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '24px' }}>
+                <td colSpan="5" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '24px' }}>
                   No matching trucks found.
                 </td>
               </tr>
@@ -225,20 +180,6 @@ const styles = {
     width: '100%',
     fontSize: '13px',
   },
-  filterGroup: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  select: {
-    padding: '8px 12px',
-    borderRadius: '6px',
-    border: '1px solid #e2e8f0',
-    backgroundColor: '#ffffff',
-    fontSize: '13px',
-    color: '#334155',
-    outline: 'none',
-  },
   tableCard: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
@@ -264,15 +205,6 @@ const styles = {
   td: {
     padding: '12px',
     color: '#334155',
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '600',
   },
   actionBtn: {
     background: 'none',

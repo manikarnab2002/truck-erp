@@ -7,10 +7,12 @@ export default function Sidebar() {
 
   const menuItems = [
     { path: '/Dashboard', label: '📊 Dashboard' },
-    { path: '/Fleet', label: '🚚 Fleet Status' },
-    { path: '/Maintenance', label: '🔧 Repairs & Service' },
+    { path: '/daily-delivery', label: '📅 Daily Delivery' },
+    { path: '/Fleet', label: '🚚 Trucks' },
+    // { path: '/Maintenance', label: '🔧 Repairs & Service' },
     { path: '/Drivers', label: '👨‍✈️ Drivers' },
     { path: '/Fuel', label: '⛽ Fuel Logs' },
+    { path: '/income-report', label: '📈 Income Report' },
   ];
 
   return (

@@ -19,23 +19,11 @@ export default function Header() {
   return (
     <header style={styles.header}>
       <div style={styles.searchBox}>
-        <Search size={16} color="#64748b" />
-        <input
-          type="text"
-          placeholder="Search truck ID, driver, order..."
-          style={styles.input}
-        />
+        
       </div>
 
       <div style={styles.profileArea}>
-        <button style={styles.iconBtn} title="Notifications">
-          <Bell size={18} color="#64748b" />
-        </button>
-
-        <div style={styles.userInfo}>
-          <div style={styles.avatar}>A</div>
-          <span style={styles.userName}>Admin</span>
-        </div>
+       
 
         <button
           style={styles.logoutTrigger}
@@ -71,8 +59,8 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     backgroundColor: '#f8fafc',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
+    // border: '1px solid #e2e8f0',
+    // borderRadius: '6px',
     padding: '6px 12px',
     width: '280px',
   },

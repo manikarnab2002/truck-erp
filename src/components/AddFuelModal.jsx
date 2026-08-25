@@ -73,20 +73,7 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog }) {
               />
             </div>
 
-            <div style={styles.field}>
-              <label style={styles.label}>Driver Name</label>
-              <div style={styles.iconInputWrapper}>
-                <User size={16} color="#64748b" style={styles.inputIcon} />
-                <input
-                  type="text"
-                  name="driver"
-                  placeholder="Driver Name"
-                  value={formData.driver}
-                  onChange={handleChange}
-                  style={{ ...styles.input, paddingLeft: '32px' }}
-                />
-              </div>
-            </div>
+            
 
             <div style={styles.field}>
               <label style={styles.label}>Fuel Quantity (Liters) *</label>
@@ -107,7 +94,6 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog }) {
             <div style={styles.field}>
               <label style={styles.label}>Total Amount Paid (₹) *</label>
               <div style={styles.iconInputWrapper}>
-                <DollarSign size={16} color="#64748b" style={styles.inputIcon} />
                 <input
                   type="number"
                   name="totalCost"
@@ -115,26 +101,12 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog }) {
                   value={formData.totalCost}
                   onChange={handleChange}
                   required
-                  style={{ ...styles.input, paddingLeft: '32px' }}
+                  style={{ ...styles.input, paddingLeft: '12px' }}
                 />
               </div>
             </div>
 
-            <div style={styles.field}>
-              <label style={styles.label}>Current Odometer (km)</label>
-              <div style={styles.iconInputWrapper}>
-                <Gauge size={16} color="#64748b" style={styles.inputIcon} />
-                <input
-                  type="number"
-                  name="odometer"
-                  placeholder="e.g. 142500"
-                  value={formData.odometer}
-                  onChange={handleChange}
-                  style={{ ...styles.input, paddingLeft: '32px' }}
-                />
-              </div>
-            </div>
-
+            
             <div style={styles.field}>
               <label style={styles.label}>Refill Date</label>
               <div style={styles.iconInputWrapper}>
@@ -149,20 +121,7 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog }) {
               </div>
             </div>
 
-            <div style={styles.fieldFull}>
-              <label style={styles.label}>Filling Station / Pump Location</label>
-              <div style={styles.iconInputWrapper}>
-                <MapPin size={16} color="#64748b" style={styles.inputIcon} />
-                <input
-                  type="text"
-                  name="station"
-                  placeholder="e.g. HP Petrol Pump, NH-16"
-                  value={formData.station}
-                  onChange={handleChange}
-                  style={{ ...styles.input, paddingLeft: '32px' }}
-                />
-              </div>
-            </div>
+            
           </div>
 
           <div style={styles.footer}>

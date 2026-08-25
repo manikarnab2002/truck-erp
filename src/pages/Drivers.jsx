@@ -30,6 +30,10 @@ export default function Drivers() {
     setDrivers((prev) => [newDriver, ...prev]);
   };
 
+  const handleDelete = (id) => {
+    setDrivers((prev) => prev.filter((driver) => driver.id !== id));
+  };
+
   const filteredDrivers = drivers.filter((driver) => {
     const matchesSearch = 
       driver.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,78 +80,6 @@ export default function Drivers() {
         onAddDriver={handleAddDriver}
       />
 
-      <div style={styles.statsGrid}>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Total Registered</span>
-            <Users size={18} color="#1e293b" />
-          </div>
-          <div style={styles.cardValue}>{drivers.length}</div>
-          <p style={styles.cardSub}>Active Fleet Operators</p>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Currently On Duty</span>
-            <ShieldCheck size={18} color="#10b981" />
-          </div>
-          <div style={styles.cardValue}>
-            {drivers.filter((d) => d.status === 'On Duty').length}
-          </div>
-          <p style={{ ...styles.cardSub, color: '#10b981' }}>Active Driving Shifts</p>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Available Drivers</span>
-            <Truck size={18} color="#3b82f6" />
-          </div>
-          <div style={styles.cardValue}>
-            {drivers.filter((d) => d.status === 'Available').length}
-          </div>
-          <p style={{ ...styles.cardSub, color: '#3b82f6' }}>Ready for Trip Assignment</p>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>License Alerts</span>
-            <AlertTriangle size={18} color="#ef4444" />
-          </div>
-          <div style={styles.cardValue}>
-            {drivers.filter((d) => d.status === 'Expired License').length}
-          </div>
-          <p style={{ ...styles.cardSub, color: '#ef4444' }}>Requires Immediate Renewal</p>
-        </div>
-      </div>
-
-      <div style={styles.filterCard}>
-        <div style={styles.searchBox}>
-          <Search size={16} color="#64748b" />
-          <input
-            type="text"
-            placeholder="Search Driver ID, Name, License No, Truck..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={styles.searchInput}
-          />
-        </div>
-
-        <div style={styles.filterGroup}>
-          <Filter size={16} color="#64748b" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={styles.select}
-          >
-            <option value="All">All Statuses</option>
-            <option value="On Duty">On Duty</option>
-            <option value="Available">Available</option>
-            <option value="On Leave">On Leave</option>
-            <option value="Expired License">Expired License</option>
-          </select>
-        </div>
-      </div>
-
       <div style={styles.tableCard}>
         <table style={styles.table}>
           <thead>
@@ -156,56 +88,35 @@ export default function Drivers() {
               <th style={styles.th}>Full Name</th>
               <th style={styles.th}>Contact Number</th>
               <th style={styles.th}>License No</th>
-              <th style={styles.th}>License Expiry</th>
-              <th style={styles.th}>Experience</th>
-              <th style={styles.th}>Assigned Truck</th>
-              <th style={styles.th}>Status</th>
               <th style={styles.th}>Action</th>
             </tr>
           </thead>
           <tbody>
             {filteredDrivers.length > 0 ? (
-              filteredDrivers.map((driver) => {
-                const statusBadge = getStatusBadge(driver.status);
-                return (
-                  <tr key={driver.id} style={styles.tr}>
-                    <td style={styles.td}><strong>{driver.id}</strong></td>
-                    <td style={styles.td}>{driver.name}</td>
-                    <td style={styles.td}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Phone size={12} color="#64748b" />
-                        {driver.phone}
-                      </span>
-                    </td>
-                    <td style={styles.td}>{driver.licenseNo}</td>
-                    <td style={styles.td}>{driver.licenseExpiry}</td>
-                    <td style={styles.td}>{driver.experience}</td>
-                    <td style={styles.td}>
-                      <strong style={{ color: driver.assignedTruck === 'Unassigned' ? '#94a3b8' : '#0f172a' }}>
-                        {driver.assignedTruck}
-                      </strong>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{
-                        ...styles.badge,
-                        backgroundColor: statusBadge.bg,
-                        color: statusBadge.text,
-                      }}>
-                        {statusBadge.icon}
-                        <span>{driver.status}</span>
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <button style={styles.actionBtn}>
-                        <MoreVertical size={16} color="#64748b" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+              filteredDrivers.map((driver) => (
+                <tr key={driver.id} style={styles.tr}>
+                  <td style={styles.td}><strong>{driver.id}</strong></td>
+                  <td style={styles.td}>{driver.name}</td>
+                  <td style={styles.td}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={12} color="#64748b" />
+                      {driver.phone}
+                    </span>
+                  </td>
+                  <td style={styles.td}>{driver.licenseNo}</td>
+                  <td style={styles.td}>
+                    <button
+                      style={{ ...styles.actionBtn, color: '#ef4444', fontWeight: '600' }}
+                      onClick={() => handleDelete(driver.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
             ) : (
               <tr>
-                <td colSpan="9" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '24px' }}>
+                <td colSpan="5" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '24px' }}>
                   No matching driver records found.
                 </td>
               </tr>
@@ -251,75 +162,6 @@ const styles = {
     fontSize: '13px',
     cursor: 'pointer',
   },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '16px',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    padding: '16px',
-  },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontSize: '13px',
-    color: '#64748b',
-  },
-  cardValue: {
-    fontSize: '26px',
-    fontWeight: '700',
-    color: '#0f172a',
-    margin: '8px 0 4px 0',
-  },
-  cardSub: {
-    fontSize: '12px',
-    color: '#64748b',
-  },
-  filterCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    padding: '12px 16px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  searchBox: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    padding: '8px 12px',
-    flex: 1,
-  },
-  searchInput: {
-    border: 'none',
-    outline: 'none',
-    backgroundColor: 'transparent',
-    width: '100%',
-    fontSize: '13px',
-  },
-  filterGroup: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  select: {
-    padding: '8px 12px',
-    borderRadius: '6px',
-    border: '1px solid #e2e8f0',
-    backgroundColor: '#ffffff',
-    fontSize: '13px',
-    color: '#334155',
-    outline: 'none',
-  },
   tableCard: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
@@ -345,15 +187,6 @@ const styles = {
   td: {
     padding: '12px',
     color: '#334155',
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '600',
   },
   actionBtn: {
     background: 'none',

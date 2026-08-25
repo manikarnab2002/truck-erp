@@ -97,61 +97,7 @@ export default function AddDriverModal({ isOpen, onClose, onAddDriver }) {
               </div>
             </div>
 
-            <div style={styles.field}>
-              <label style={styles.label}>License Expiry Date</label>
-              <div style={styles.iconInputWrapper}>
-                <Calendar size={16} color="#64748b" style={styles.inputIcon} />
-                <input
-                  type="date"
-                  name="licenseExpiry"
-                  value={formData.licenseExpiry}
-                  onChange={handleChange}
-                  style={{ ...styles.input, paddingLeft: '32px' }}
-                />
-              </div>
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label}>Driving Experience</label>
-              <input
-                type="text"
-                name="experience"
-                placeholder="e.g. 5 Yrs"
-                value={formData.experience}
-                onChange={handleChange}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label}>Assign Truck Reg No</label>
-              <div style={styles.iconInputWrapper}>
-                <Truck size={16} color="#64748b" style={styles.inputIcon} />
-                <input
-                  type="text"
-                  name="assignedTruck"
-                  placeholder="e.g. WB-19-AX-4021"
-                  value={formData.assignedTruck}
-                  onChange={handleChange}
-                  style={{ ...styles.input, paddingLeft: '32px' }}
-                />
-              </div>
-            </div>
-
-            <div style={styles.fieldFull}>
-              <label style={styles.label}>Initial Driver Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                style={styles.select}
-              >
-                <option value="Available">Available (Ready for assignment)</option>
-                <option value="On Duty">On Duty (Currently driving)</option>
-                <option value="On Leave">On Leave</option>
-                <option value="Expired License">Expired License</option>
-              </select>
-            </div>
+            
           </div>
 
           <div style={styles.footer}>

@@ -1,12 +1,5 @@
 import React from 'react';
-import { 
-  Truck, 
-  Wrench, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Clock, 
-  ArrowUpRight 
-} from 'lucide-react';
+import { Truck,Users, Fuel, CheckCircle2 } from 'lucide-react';
 import { 
   BarChart, 
   Bar, 
@@ -26,12 +19,7 @@ const serviceData = [
   { month: 'Jun', completed: 72, ongoing: 18 },
 ];
 
-const recentWorkOrders = [
-  { id: 'WO-8041', truckNo: 'WB-19-AX-4021', service: 'Engine Overhaul', status: 'In Progress', priority: 'High', ETA: '2 Hours' },
-  { id: 'WO-8042', truckNo: 'WB-23-C-8812', service: 'Brake Pad Replacement', status: 'Queued', priority: 'Medium', ETA: 'Today' },
-  { id: 'WO-8043', truckNo: 'MH-12-Q-5510', service: 'Oil & Filter Change', status: 'In Progress', priority: 'Low', ETA: '1 Hour' },
-  { id: 'WO-8044', truckNo: 'DL-01-AB-9001', service: 'Tire Alignment', status: 'Completed', priority: 'Low', ETA: 'Done' },
-];
+
 
 export default function Dashboard() {
   return (
@@ -46,39 +34,42 @@ export default function Dashboard() {
       <div style={styles.statsGrid}>
         <div style={styles.card}>
           <div style={styles.cardHeader}>
-            <span>Total Fleet</span>
+            <span>Trucks</span>
             <Truck size={20} color="#1e293b" />
           </div>
           <div style={styles.cardValue}>124</div>
           <p style={styles.cardSub}>98 Active on Road</p>
         </div>
 
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>In Service Workshop</span>
-            <Wrench size={20} color="#f59e0b" />
-          </div>
-          <div style={styles.cardValue}>14</div>
-          <p style={styles.cardSub}>6 Major Repairs</p>
-        </div>
+        {/* Drivers Card - Violet Theme */}
+<div style={styles.card}>
+  <div style={styles.cardHeader}>
+    <span>Drivers</span>
+    <Users size={20} color="#8b5cf6" />
+  </div>
+  <div style={styles.cardValue}>48</div>
+  <p style={{ ...styles.cardSub, color: '#7c3aed' }}>42 On Duty</p>
+</div>
 
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Breakdown Alerts</span>
-            <AlertTriangle size={20} color="#ef4444" />
-          </div>
-          <div style={styles.cardValue}>3</div>
-          <p style={{ ...styles.cardSub, color: '#ef4444' }}>Requires Immediate Towing</p>
-        </div>
+{/* Fuel Card - Amber / Orange Theme */}
+<div style={styles.card}>
+  <div style={styles.cardHeader}>
+    <span>Fuel Consumption</span>
+    <Fuel size={20} color="#f97316" />
+  </div>
+  <div style={styles.cardValue}>1,450 L</div>
+  <p style={{ ...styles.cardSub, color: '#ea580c' }}>Avg 3.8 km/L</p>
+</div>
 
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <span>Ready for Delivery</span>
-            <CheckCircle2 size={20} color="#10b981" />
-          </div>
-          <div style={styles.cardValue}>9</div>
-          <p style={{ ...styles.cardSub, color: '#10b981' }}>QC Passed</p>
-        </div>
+{/* Ready for Delivery Card - Emerald Theme */}
+<div style={styles.card}>
+  <div style={styles.cardHeader}>
+    <span>Ready for Delivery</span>
+    <CheckCircle2 size={20} color="#10b981" />
+  </div>
+  <div style={styles.cardValue}>9</div>
+  <p style={{ ...styles.cardSub, color: '#16a34a' }}>QC Passed</p>
+</div>
       </div>
 
       <div style={styles.middleSection}>
@@ -98,67 +89,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={styles.quickStatsCard}>
-          <h3 style={styles.sectionTitle}>Maintenance Health</h3>
-          <div style={styles.healthItem}>
-            <div style={styles.healthInfo}>
-              <span>Scheduled Maintenance</span>
-              <strong>18 Trucks</strong>
-            </div>
-            <Clock size={18} color="#64748b" />
-          </div>
-          <div style={styles.healthItem}>
-            <div style={styles.healthInfo}>
-              <span>Parts Inventory Stock</span>
-              <strong>84% Sufficient</strong>
-            </div>
-            <ArrowUpRight size={18} color="#10b981" />
-          </div>
-          <div style={styles.healthItem}>
-            <div style={styles.healthInfo}>
-              <span>Avg Repair Turnaround</span>
-              <strong>1.8 Days</strong>
-            </div>
-            <Clock size={18} color="#64748b" />
-          </div>
-        </div>
+       
       </div>
 
-      <div style={styles.tableCard}>
-        <h3 style={styles.sectionTitle}>Active Service Work Orders</h3>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Work Order ID</th>
-              <th style={styles.th}>Truck Number</th>
-              <th style={styles.th}>Service Type</th>
-              <th style={styles.th}>Priority</th>
-              <th style={styles.th}>Status</th>
-              <th style={styles.th}>ETA</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentWorkOrders.map((item) => (
-              <tr key={item.id} style={styles.tr}>
-                <td style={styles.td}><strong>{item.id}</strong></td>
-                <td style={styles.td}>{item.truckNo}</td>
-                <td style={styles.td}>{item.service}</td>
-                <td style={styles.td}>
-                  <span style={{
-                    ...styles.badge,
-                    backgroundColor: item.priority === 'High' ? '#fee2e2' : item.priority === 'Medium' ? '#fef3c7' : '#f1f5f9',
-                    color: item.priority === 'High' ? '#991b1b' : item.priority === 'Medium' ? '#92400e' : '#475569',
-                  }}>
-                    {item.priority}
-                  </span>
-                </td>
-                <td style={styles.td}>{item.status}</td>
-                <td style={styles.td}>{item.ETA}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+       
     </div>
   );
 }

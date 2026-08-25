@@ -8,6 +8,8 @@ import Drivers from './pages/Drivers';
 import Fuel from './pages/Fuel';
 import Logout from './components/LogoutModal';
 import Login from './pages/Login';
+import DailyDelivery from './pages/DailyDelivery';
+import IncomeReport from './pages/IncomeReport';
 
 // Simple local views kept for routing structure
 const Overview = () => (
@@ -36,12 +38,13 @@ export default function AppRoutes() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="daily-delivery" element={<DailyDelivery />} />
         <Route path="fleet" element={<Fleet />} />
         <Route path="maintenance" element={<Maintenance />} />
         <Route path="drivers" element={<Drivers />} />
         <Route path="fuel" element={<Fuel />} />
+        <Route path="income-report" element={<IncomeReport />} />
         <Route path="logout" element={<Logout />} />
-        
       </Route>
     </Routes>
   );

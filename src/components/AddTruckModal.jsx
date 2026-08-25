@@ -8,7 +8,7 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
     type: 'Trailer',
     driver: '',
     mileage: '',
-    lastService: '',
+    date: '',
     status: 'Active',
   };
 
@@ -96,64 +96,23 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
               </select>
             </div>
 
-            <div style={styles.field}>
-              <label style={styles.label}>Assigned Driver</label>
-              <div style={styles.iconInputWrapper}>
-                <User size={16} color="#64748b" style={styles.inputIcon} />
-                <input
-                  type="text"
-                  name="driver"
-                  placeholder="Driver Name"
-                  value={formData.driver}
-                  onChange={handleChange}
-                  style={{ ...styles.input, paddingLeft: '32px' }}
-                />
-              </div>
-            </div>
+            
 
             <div style={styles.field}>
-              <label style={styles.label}>Current Odometer (km)</label>
-              <div style={styles.iconInputWrapper}>
-                <Gauge size={16} color="#64748b" style={styles.inputIcon} />
-                <input
-                  type="number"
-                  name="mileage"
-                  placeholder="e.g. 120000"
-                  value={formData.mileage}
-                  onChange={handleChange}
-                  style={{ ...styles.input, paddingLeft: '32px' }}
-                />
-              </div>
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label}>Last Service Date</label>
+              <label style={styles.label}>Date</label>
               <div style={styles.iconInputWrapper}>
                 <Calendar size={16} color="#64748b" style={styles.inputIcon} />
                 <input
                   type="date"
-                  name="lastService"
-                  value={formData.lastService}
+                  name="date"
+                  value={formData.date}
                   onChange={handleChange}
                   style={{ ...styles.input, paddingLeft: '32px' }}
                 />
               </div>
             </div>
 
-            <div style={styles.fieldFull}>
-              <label style={styles.label}>Initial Vehicle Status</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                style={styles.select}
-              >
-                <option value="Active">Active (Ready for dispatch)</option>
-                <option value="In Service">In Service (Under maintenance)</option>
-                <option value="Idle">Idle (Unassigned)</option>
-                <option value="Breakdown">Breakdown (Needs towing/repair)</option>
-              </select>
-            </div>
+            
           </div>
 
           <div style={styles.footer}>
