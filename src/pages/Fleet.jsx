@@ -22,7 +22,7 @@ export default function Fleet() {
 
   const loadTrucks = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/trucks');
+      const response = await fetch('/api/trucks');
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Failed to load trucks.');
       setFleetList(data);
@@ -35,7 +35,7 @@ export default function Fleet() {
   };
 
   const handleAddTruck = async (newTruck) => {
-    const response = await fetch('http://localhost:5000/api/trucks', {
+    const response = await fetch('/api/trucks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newTruck),
@@ -53,7 +53,7 @@ export default function Fleet() {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/trucks/${encodeURIComponent(id)}`, {
+      const response = await fetch(`/api/trucks?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
       const result = await response.json();

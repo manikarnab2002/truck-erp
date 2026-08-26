@@ -56,7 +56,7 @@ export default function Drivers() {
 
       setLoading(true);
 
-      const response = await fetch("http://localhost:5000/api/drivers")
+      const response = await fetch("/api/drivers")
 
       const data =
         await response.json();
@@ -105,7 +105,7 @@ export default function Drivers() {
       try {
 
         const response = await fetch(
-          "http://localhost:5000/api/drivers",
+          "/api/drivers",
           {
             method: "POST",
 
@@ -196,7 +196,7 @@ export default function Drivers() {
 
         const response =
           await fetch(
-            `http://localhost:5000/api/drivers?id=${encodeURIComponent(id)}`,
+            `/api/drivers?id=${encodeURIComponent(id)}`,
             {
               method: "DELETE",
             }

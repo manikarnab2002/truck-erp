@@ -50,7 +50,7 @@ export default function DailyDelivery() {
 
   const loadDeliveries = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/deliveries");
+      const response = await fetch("/api/deliveries");
       const data = await response.json();
 
       if (!response.ok) {
@@ -104,7 +104,7 @@ export default function DailyDelivery() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/deliveries",
+        "/api/deliveries",
         {
           method: "POST",
           headers: {
@@ -150,7 +150,7 @@ export default function DailyDelivery() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/deliveries?id=${encodeURIComponent(id)}`,
+        `/api/deliveries?id=${encodeURIComponent(id)}`,
         { method: "DELETE" }
       );
       const result = await response.json();

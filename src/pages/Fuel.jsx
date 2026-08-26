@@ -23,7 +23,7 @@ export default function Fuel() {
 
   const loadFuelLogs = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/fuel');
+      const response = await fetch('/api/fuel');
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Failed to load fuel logs.');
       setFuelLogs(data);
@@ -36,7 +36,7 @@ export default function Fuel() {
   };
 
   const handleAddFuelLog = async (newLog) => {
-    const response = await fetch('http://localhost:5000/api/fuel', {
+    const response = await fetch('/api/fuel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newLog),
@@ -54,7 +54,7 @@ export default function Fuel() {
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/fuel/${encodeURIComponent(id)}`, {
+      const response = await fetch(`/api/fuel?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
       const result = await response.json();
