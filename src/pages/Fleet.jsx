@@ -1,19 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import AddTruckModal from '../components/AddTruckModal';
-import { 
-  Search, 
-  Plus, 
-  Truck, 
-  AlertCircle, 
-  CheckCircle2, 
-  Clock 
-} from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
+
+const normalizeTruck = (truck, index = 0) => {
+  if (!truck || typeof truck !== 'object') return null;
+
+  const id = String(
+    truck.id ||
+    truck._id?.toString?.() ||
+    truck.truckNumber ||
+    truck.regNo ||
+    `truck-${index}`
+  );
+
+  return {
+    ...truck,
+    id,
+    regNo: truck.regNo || truck.truckNumber || '',
+    model: truck.model || '',
+    type: truck.type || 'Trailer',
+    date: truck.date || truck.registeredDate || '',
+  };
+};
 
 export default function Fleet() {
   const [fleetList, setFleetList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -25,7 +38,11 @@ export default function Fleet() {
       const response = await fetch('/api/trucks');
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Failed to load trucks.');
-      setFleetList(data);
+      setFleetList(
+        Array.isArray(data)
+          ? data.map(normalizeTruck).filter(Boolean)
+          : []
+      );
     } catch (error) {
       console.error('Load trucks error:', error);
       alert('Unable to load trucks. Please check your backend and MongoDB connection.');
@@ -35,20 +52,29 @@ export default function Fleet() {
   };
 
   const handleAddTruck = async (newTruck) => {
-    const response = await fetch('/api/trucks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTruck),
-    });
-    const result = await response.json();
+    try {
+      const response = await fetch('/api/trucks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newTruck),
+      });
 
-    if (!response.ok) {
-      alert(result.message || 'Failed to add truck.');
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.message || 'Failed to add truck.');
+        return false;
+      }
+
+      await loadTrucks();
+      return true;
+    } catch (error) {
+      console.error('Add truck error:', error);
+      alert(error.message || 'Unable to save truck.');
       return false;
     }
-
-    setFleetList((prev) => [result.data, ...prev]);
-    return true;
   };
 
   const handleDelete = async (id) => {
@@ -66,15 +92,10 @@ export default function Fleet() {
   };
 
   const filteredFleet = fleetList.filter((truck) => {
-    const matchesSearch =
-  (truck.regNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-  (truck.driver || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-  (truck.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-  (truck.id || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'All' || truck.status === statusFilter;
+    if (!truck) return false;
 
-    return matchesSearch && matchesStatus;
+    return [truck.regNo, truck.model, truck.type, truck.id]
+      .some((value) => String(value || '').toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
   return (
@@ -82,7 +103,7 @@ export default function Fleet() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Fleet Management</h1>
-          <p style={styles.subtitle}>Track vehicle status, assigned drivers, and maintenance records.</p>
+          <p style={styles.subtitle}>Track vehicle status and registration records.</p>
         </div>
         <button style={styles.primaryBtn} onClick={() => setIsModalOpen(true)}>
           <Plus size={16} />
@@ -101,7 +122,7 @@ export default function Fleet() {
           <Search size={16} color="#64748b" />
           <input
             type="text"
-            placeholder="Search by Truck ID, Reg No, Driver, Model..."
+            placeholder="Search by Truck ID, Reg No, Model, Type..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={styles.searchInput}

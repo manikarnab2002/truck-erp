@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
-import { X, Truck, Calendar, User, Gauge } from 'lucide-react';
+import { X, Truck, Calendar } from 'lucide-react';
 
 export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
   const initialFormState = {
     regNo: '',
     model: '',
     type: 'Trailer',
-    driver: '',
-    mileage: '',
     date: '',
-    status: 'Active',
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -97,8 +94,6 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
               </select>
             </div>
 
-            
-
             <div style={styles.field}>
               <label style={styles.label}>Date</label>
               <div style={styles.iconInputWrapper}>
@@ -112,8 +107,6 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
                 />
               </div>
             </div>
-
-            
           </div>
 
           <div style={styles.footer}>
@@ -183,12 +176,6 @@ const styles = {
     gap: '14px',
   },
   field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-  },
-  fieldFull: {
-    gridColumn: 'span 2',
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
