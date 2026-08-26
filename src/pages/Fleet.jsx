@@ -66,11 +66,11 @@ export default function Fleet() {
   };
 
   const filteredFleet = fleetList.filter((truck) => {
-    const matchesSearch = 
-      truck.regNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      truck.driver.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      truck.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      truck.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+  (truck.regNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (truck.driver || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (truck.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (truck.id || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'All' || truck.status === statusFilter;
 

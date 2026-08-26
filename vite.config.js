@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url'
 const apiRoutes = new Set([
   'deliveries',
   'drivers',
+  'fuel',
   'income',
   'maintenance',
   'trucks',
