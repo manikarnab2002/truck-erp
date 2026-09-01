@@ -1,33 +1,110 @@
-import React from 'react';
-import { Truck,Users, Fuel, CheckCircle2 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import React, { useEffect, useState } from 'react';
+import { Truck, Users, Fuel, CheckCircle2 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
 } from 'recharts';
 
-const serviceData = [
-  { month: 'Jan', completed: 42, ongoing: 12 },
-  { month: 'Feb', completed: 50, ongoing: 15 },
-  { month: 'Mar', completed: 38, ongoing: 8 },
-  { month: 'Apr', completed: 65, ongoing: 20 },
-  { month: 'May', completed: 58, ongoing: 14 },
-  { month: 'Jun', completed: 72, ongoing: 18 },
-];
+const buildMonthlyChartData = (records = []) => {
+  const monthMap = new Map();
 
+  records.forEach((record) => {
+    const rawDate = record.deliveryDate || record.createdAt || record.date;
+    const date = new Date(rawDate);
 
+    if (Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const monthLabel = date.toLocaleString('en-US', { month: 'short' });
+
+    if (!monthMap.has(key)) {
+      monthMap.set(key, {
+        key,
+        month: monthLabel,
+        income: 0,
+        expense: 0,
+        profit: 0,
+        deliveries: 0,
+      });
+    }
+
+    const item = monthMap.get(key);
+    const income = Number(record.deliveryCost || 0);
+    const expense =
+      Number(record.fuelCost || 0) +
+      Number(record.tollCost || 0) +
+      Number(record.maintenanceCost || 0);
+
+    item.income += income;
+    item.expense += expense;
+    item.profit += Number(record.netIncome ?? income - expense);
+    item.deliveries += 1;
+  });
+
+  return Array.from(monthMap.values())
+    .sort((a, b) => new Date(`2024 ${a.month} 01`).getTime() - new Date(`2024 ${b.month} 01`).getTime())
+    .slice(-6);
+};
 
 export default function Dashboard() {
+  const [stats, setStats] = useState({
+    trucks: 0,
+    drivers: 0,
+    fuelLogs: 0,
+    deliveries: 0,
+  });
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const [trucksRes, driversRes, fuelRes, deliveriesRes] = await Promise.all([
+          fetch('/api/trucks'),
+          fetch('/api/drivers'),
+          fetch('/api/fuel'),
+          fetch('/api/deliveries'),
+        ]);
+
+        const [trucks, drivers, fuelLogs, deliveries] = await Promise.all([
+          trucksRes.json(),
+          driversRes.json(),
+          fuelRes.json(),
+          deliveriesRes.json(),
+        ]);
+
+        setStats({
+          trucks: Array.isArray(trucks) ? trucks.length : 0,
+          drivers: Array.isArray(drivers) ? drivers.length : 0,
+          fuelLogs: Array.isArray(fuelLogs) ? fuelLogs.length : 0,
+          deliveries: Array.isArray(deliveries) ? deliveries.length : 0,
+        });
+
+        setChartData(buildMonthlyChartData(Array.isArray(deliveries) ? deliveries : []));
+      } catch (error) {
+        console.error('Dashboard load error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Truck ERP Overview</h1>
-          <p style={styles.subtitle}>Real-time monitoring of fleet status, repairs, and service schedules.</p>
+          <p style={styles.subtitle}>Real-time monitoring of fleet status, operations, and financial performance.</p>
         </div>
       </div>
 
@@ -37,62 +114,73 @@ export default function Dashboard() {
             <span>Trucks</span>
             <Truck size={20} color="#1e293b" />
           </div>
-          <div style={styles.cardValue}>124</div>
-          <p style={styles.cardSub}>98 Active on Road</p>
+          <div style={styles.cardValue}>{loading ? '...' : stats.trucks}</div>
+          <p style={styles.cardSub}>{stats.trucks} total vehicles</p>
         </div>
 
-        {/* Drivers Card - Violet Theme */}
-<div style={styles.card}>
-  <div style={styles.cardHeader}>
-    <span>Drivers</span>
-    <Users size={20} color="#8b5cf6" />
-  </div>
-  <div style={styles.cardValue}>48</div>
-  <p style={{ ...styles.cardSub, color: '#7c3aed' }}>42 On Duty</p>
-</div>
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <span>Drivers</span>
+            <Users size={20} color="#8b5cf6" />
+          </div>
+          <div style={styles.cardValue}>{loading ? '...' : stats.drivers}</div>
+          <p style={{ ...styles.cardSub, color: '#7c3aed' }}>{stats.drivers} active profiles</p>
+        </div>
 
-{/* Fuel Card - Amber / Orange Theme */}
-<div style={styles.card}>
-  <div style={styles.cardHeader}>
-    <span>Fuel Consumption</span>
-    <Fuel size={20} color="#f97316" />
-  </div>
-  <div style={styles.cardValue}>1,450 L</div>
-  <p style={{ ...styles.cardSub, color: '#ea580c' }}>Avg 3.8 km/L</p>
-</div>
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <span>Fuel Logs</span>
+            <Fuel size={20} color="#f97316" />
+          </div>
+          <div style={styles.cardValue}>{loading ? '...' : stats.fuelLogs}</div>
+          <p style={{ ...styles.cardSub, color: '#ea580c' }}>{stats.fuelLogs} entries saved</p>
+        </div>
 
-{/* Ready for Delivery Card - Emerald Theme */}
-<div style={styles.card}>
-  <div style={styles.cardHeader}>
-    <span>Ready for Delivery</span>
-    <CheckCircle2 size={20} color="#10b981" />
-  </div>
-  <div style={styles.cardValue}>9</div>
-  <p style={{ ...styles.cardSub, color: '#16a34a' }}>QC Passed</p>
-</div>
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <span>Deliveries</span>
+            <CheckCircle2 size={20} color="#10b981" />
+          </div>
+          <div style={styles.cardValue}>{loading ? '...' : stats.deliveries}</div>
+          <p style={{ ...styles.cardSub, color: '#16a34a' }}>{stats.deliveries} records booked</p>
+        </div>
       </div>
 
       <div style={styles.middleSection}>
         <div style={styles.chartCard}>
-          <h3 style={styles.sectionTitle}>Monthly Service Workloads</h3>
+          <h3 style={styles.sectionTitle}>Monthly Delivery Activity</h3>
           <div style={{ width: '100%', height: 280 }}>
             <ResponsiveContainer>
-              <BarChart data={serviceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="month" tickLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
                 <Tooltip />
-                <Bar dataKey="completed" fill="#1e293b" radius={[4, 4, 0, 0]} name="Completed Repairs" />
-                <Bar dataKey="ongoing" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Ongoing Service" />
+                <Legend />
+                <Bar dataKey="deliveries" fill="#1e293b" radius={[4, 4, 0, 0]} name="Deliveries" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-       
+        <div style={styles.chartCard}>
+          <h3 style={styles.sectionTitle}>Monthly Profit &amp; Loss</h3>
+          <div style={{ width: '100%', height: 280 }}>
+            <ResponsiveContainer>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tickLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <Tooltip formatter={(value) => `₹${Number(value).toLocaleString()}`} />
+                <Legend />
+                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Income" />
+                <Bar dataKey="expense" fill="#ef4444" radius={[4, 4, 0, 0]} name="Expense" />
+                <Bar dataKey="profit" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Profit" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
-
-       
     </div>
   );
 }
@@ -148,7 +236,7 @@ const styles = {
   },
   middleSection: {
     display: 'grid',
-    gridTemplateColumns: '2fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
     gap: '16px',
   },
   chartCard: {
@@ -157,64 +245,10 @@ const styles = {
     borderRadius: '8px',
     padding: '16px',
   },
-  quickStatsCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
   sectionTitle: {
     fontSize: '15px',
     color: '#0f172a',
     fontWeight: '600',
     marginBottom: '12px',
-  },
-  healthItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '10px 12px',
-    backgroundColor: '#f8fafc',
-    borderRadius: '6px',
-  },
-  healthInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    fontSize: '12px',
-    color: '#64748b',
-  },
-  tableCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    padding: '16px',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    textAlign: 'left',
-    fontSize: '13px',
-  },
-  th: {
-    padding: '10px 12px',
-    borderBottom: '1px solid #e2e8f0',
-    color: '#64748b',
-    fontWeight: '600',
-  },
-  tr: {
-    borderBottom: '1px solid #f1f5f9',
-  },
-  td: {
-    padding: '12px',
-    color: '#334155',
-  },
-  badge: {
-    padding: '3px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '600',
   },
 };

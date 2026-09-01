@@ -32,8 +32,8 @@ function apiMiddleware() {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use('/api', async (req, res, next) => {
-        const requestUrl = new URL(req.url, 'http://localhost')
-        const match = requestUrl.pathname.match(/^\/([^/]+)\/?$/)
+        const requestUrl = new URL(req.originalUrl || req.url, 'http://localhost')
+        const match = requestUrl.pathname.match(/^\/(?:api\/)?([^/]+)\/?$/)
         const route = match?.[1]
 
         if (!route || !apiRoutes.has(route)) {

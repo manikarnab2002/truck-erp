@@ -40,13 +40,61 @@ export default function DailyDelivery() {
 
   const [deliveries, setDeliveries] = useState([]);
 
+  const [truckOptions, setTruckOptions] = useState([]);
+
+  const [driverOptions, setDriverOptions] = useState([]);
+
   const [saved, setSaved] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadDeliveries();
+    loadTruckOptions();
+    loadDriverOptions();
   }, []);
+
+  const loadTruckOptions = async () => {
+    try {
+      const response = await fetch("/api/trucks");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load truck list.");
+      }
+
+      const options = Array.isArray(data)
+        ? data
+            .map((truck) => truck?.regNo?.trim())
+            .filter(Boolean)
+        : [];
+
+      setTruckOptions([...new Set(options)]);
+    } catch (error) {
+      console.error("Load truck options error:", error);
+    }
+  };
+
+  const loadDriverOptions = async () => {
+    try {
+      const response = await fetch("/api/drivers");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load driver list.");
+      }
+
+      const options = Array.isArray(data)
+        ? data
+            .map((driver) => driver?.name?.trim())
+            .filter(Boolean)
+        : [];
+
+      setDriverOptions([...new Set(options)]);
+    } catch (error) {
+      console.error("Load driver options error:", error);
+    }
+  };
 
   const loadDeliveries = async () => {
     try {
@@ -248,7 +296,7 @@ export default function DailyDelivery() {
 
           <div style={styles.formGrid}>
 
-            <FormGroup label="Truck Name" required>
+            {/* <FormGroup label="Truck Name" required>
 
               <select
                 name="truckName"
@@ -280,20 +328,30 @@ export default function DailyDelivery() {
 
               </select>
 
-            </FormGroup>
+            </FormGroup> */}
 
 
-            <FormGroup label="Truck Number" required>
+            <FormGroup label="Truck Registration Number" required>
 
-              <input
-                type="text"
+              <select
                 name="truckNumber"
                 value={formData.truckNumber}
                 onChange={handleChange}
-                placeholder="e.g. WB-19-AX-4021"
                 style={styles.input}
                 required
-              />
+              >
+
+                <option value="">
+                  Select Truck Registration Number
+                </option>
+
+                {truckOptions.map((truckNo) => (
+                  <option key={truckNo} value={truckNo}>
+                    {truckNo}
+                  </option>
+                ))}
+
+              </select>
 
             </FormGroup>
 
@@ -319,21 +377,11 @@ export default function DailyDelivery() {
                     Select Driver
                   </option>
 
-                  <option value="Rajesh Kumar">
-                    Rajesh Kumar
-                  </option>
-
-                  <option value="Suresh Raina">
-                    Suresh Raina
-                  </option>
-
-                  <option value="Amit Singh">
-                    Amit Singh
-                  </option>
-
-                  <option value="Vikas Verma">
-                    Vikas Verma
-                  </option>
+                  {driverOptions.map((driverName) => (
+                    <option key={driverName} value={driverName}>
+                      {driverName}
+                    </option>
+                  ))}
 
                 </select>
 

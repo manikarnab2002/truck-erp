@@ -148,8 +148,7 @@ app.post(
       // Validation
 
       if (
-        !name ||
-        !licenseNo
+        !name
       ) {
 
         return res.status(400).json({
@@ -157,14 +156,14 @@ app.post(
           success: false,
 
           message:
-            "Name and license number are required."
+            "Name and phone number are required."
 
         });
 
       }
 
 
-      // Check duplicate license
+      // Check duplicate phone number
 
       const existingDriver =
         await db
@@ -204,21 +203,15 @@ app.post(
         phone:
           phone?.trim() || "",
 
-        licenseNo:
-          licenseNo.trim(),
-
-        licenseExpiry:
-          licenseExpiry || "",
-
-        experience:
-          experience || "3 Yrs",
-
         assignedTruck:
           assignedTruck ||
           "Unassigned",
 
         status:
           status || "Available",
+
+        experience:
+          experience || "",
 
         createdAt:
           new Date(),
@@ -369,6 +362,7 @@ app.post("/api/trucks", async (req, res) => {
   try {
     const {
       regNo,
+      chassisNo,
       model,
       type,
       driver,
@@ -398,8 +392,9 @@ app.post("/api/trucks", async (req, res) => {
     const truck = {
       id: `TRK-${Date.now()}`,
       regNo: regNo.trim(),
+      chassisNo: chassisNo?.trim() || "",
       model: model.trim(),
-      type: type || "Trailer",
+      type: type || "Open_Truck",
       driver: driver?.trim() || "Unassigned",
       mileage: mileage ? `${Number(mileage).toLocaleString()} km` : "0 km",
       lastService: date || "",

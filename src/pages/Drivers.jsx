@@ -31,6 +31,9 @@ export default function Drivers() {
   const [loading, setLoading] =
     useState(true);
 
+  const [truckOptions, setTruckOptions] =
+    useState([]);
+
   const [deletingId, setDeletingId] =
     useState(null);
 
@@ -42,8 +45,30 @@ export default function Drivers() {
   useEffect(() => {
 
     loadDrivers();
+    loadTruckOptions();
 
   }, []);
+
+  const loadTruckOptions = async () => {
+    try {
+      const response = await fetch("/api/trucks");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load truck list.");
+      }
+
+      const options = Array.isArray(data)
+        ? data
+            .map((truck) => truck?.regNo?.trim())
+            .filter(Boolean)
+        : [];
+
+      setTruckOptions([...new Set(options)]);
+    } catch (error) {
+      console.error("Load truck options error:", error);
+    }
+  };
 
 
   // ==========================================
@@ -430,6 +455,8 @@ export default function Drivers() {
           handleAddDriver
         }
 
+        truckOptions={truckOptions}
+
       />
 
 
@@ -527,14 +554,6 @@ export default function Drivers() {
 
               <th style={styles.th}>
                 Contact Number
-              </th>
-
-              <th style={styles.th}>
-                License No
-              </th>
-
-              <th style={styles.th}>
-                License Expiry
               </th>
 
               <th style={styles.th}>
@@ -645,32 +664,6 @@ export default function Drivers() {
                         </span>
 
                       </td>
-
-
-                      {/* LICENSE */}
-
-                      <td style={styles.td}>
-
-                        {driver.licenseNo ||
-                          "-"}
-
-                      </td>
-
-
-                      {/* LICENSE EXPIRY */}
-
-                      <td style={styles.td}>
-
-                        {driver.licenseExpiry
-                          ? new Date(
-                              driver.licenseExpiry
-                            ).toLocaleDateString(
-                              "en-IN"
-                            )
-                          : "-"}
-
-                      </td>
-
 
                       {/* ASSIGNED TRUCK */}
 

@@ -5,7 +5,8 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
   const initialFormState = {
     regNo: '',
     model: '',
-    type: 'Trailer',
+    chassisNo: '',
+    type: 'Open_Truck',
     date: '',
   };
 
@@ -65,6 +66,19 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
               />
             </div>
 
+              <div style={styles.field}>
+              <label style={styles.label}>Chassis Number *</label>
+              <input
+                type="text"
+                name="chassisNo"
+                placeholder="e.g. XYZ123"
+                value={formData.chassisNo}
+                onChange={handleChange}
+                required
+                style={styles.input}
+              />
+            </div>
+
             <div style={styles.field}>
               <label style={styles.label}>Vehicle Model *</label>
               <input
@@ -86,11 +100,8 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
                 onChange={handleChange}
                 style={styles.select}
               >
-                <option value="Trailer">Trailer</option>
-                <option value="Haulage">Haulage</option>
-                <option value="Tipper">Tipper</option>
+                <option value="Open_Truck">Open Truck</option>
                 <option value="Container">Container</option>
-                <option value="Tanker">Tanker</option>
               </select>
             </div>
 

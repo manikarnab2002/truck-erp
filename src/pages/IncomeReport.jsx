@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp,
   DollarSign,
@@ -27,36 +27,71 @@ import {
   Legend
 } from 'recharts';
 
-const initialDeliveries = [
-  { id: 'DEL-501', invoiceNo: 'INV-2026-001', date: '2026-08-25', truckReg: 'WB-19-AX-4021', client: 'Tata Steel', quantityTonnes: 32, income: 64000, received: 64000, due: 0, expense: 22000, status: 'Paid' },
-  { id: 'DEL-502', invoiceNo: 'INV-2026-002', date: '2026-08-22', truckReg: 'WB-23-C-8812', client: 'JSW Cement', quantityTonnes: 28, income: 56000, received: 30000, due: 26000, expense: 18500, status: 'Partial' },
-  { id: 'DEL-503', invoiceNo: 'INV-2026-003', date: '2026-08-14', truckReg: 'MH-12-Q-5510', client: 'UltraTech', quantityTonnes: 40, income: 80000, received: 80000, due: 0, expense: 26000, status: 'Paid' },
-  { id: 'DEL-504', invoiceNo: 'INV-2026-004', date: '2026-07-22', truckReg: 'DL-01-AB-9001', client: 'Ambuja', quantityTonnes: 24, income: 48000, received: 0, due: 48000, expense: 16000, status: 'Pending' },
-  { id: 'DEL-505', invoiceNo: 'INV-2026-005', date: '2026-06-10', truckReg: 'WB-19-AX-4021', client: 'Tata Steel', quantityTonnes: 35, income: 70000, received: 70000, due: 0, expense: 24000, status: 'Paid' },
-  { id: 'DEL-506', invoiceNo: 'INV-2026-006', date: '2026-06-25', truckReg: 'KA-04-E-1122', client: 'Vedanta Ltd', quantityTonnes: 45, income: 95000, received: 50000, due: 45000, expense: 31000, status: 'Partial' },
-];
+const normalizeDeliveryRecord = (item) => {
+  const amountPaid = Number(item.amountPaid ?? item.received ?? 0);
+  const deliveryCost = Number(item.deliveryCost ?? item.income ?? 0);
+  const dueAmount = Number(item.dueAmount ?? item.due ?? Math.max(deliveryCost - amountPaid, 0));
+  const totalExpense = Number(item.totalExpense ?? item.expense ?? 0);
+  const quantityTonnes = Number(item.quantity ?? item.quantityTonnes ?? 0);
+  const date = item.deliveryDate || item.date || '';
+  const status = dueAmount > 0 ? (amountPaid > 0 ? 'Partial' : 'Pending') : 'Paid';
+
+  return {
+    id: item._id ? String(item._id) : (item.id || 'DEL-000'),
+    invoiceNo: item.invoiceNo || `INV-${String(item._id || '').slice(-6) || '000001'}`,
+    date,
+    truckReg: item.truckNumber || item.truckReg || '',
+    client: item.client || item.source || item.destination || item.material || 'Client',
+    quantityTonnes,
+    income: deliveryCost,
+    received: amountPaid,
+    due: dueAmount,
+    expense: totalExpense,
+    status,
+    raw: item,
+  };
+};
 
 export default function IncomeReport() {
-  const [deliveries, setDeliveries] = useState(initialDeliveries);
+  const [deliveries, setDeliveries] = useState([]);
   const [selectedTruck, setSelectedTruck] = useState('All');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeModalData, setActiveModalData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadIncomeData = async () => {
+      try {
+        const response = await fetch('/api/income');
+        if (!response.ok) {
+          throw new Error('Failed to fetch income data');
+        }
+
+        const data = await response.json();
+        const records = Array.isArray(data?.records) ? data.records : Array.isArray(data) ? data : [];
+        setDeliveries(records.map(normalizeDeliveryRecord));
+      } catch (error) {
+        console.error('Income report load error:', error);
+        setDeliveries([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadIncomeData();
+  }, []);
 
   const truckOptions = useMemo(() => {
-    return Array.from(new Set(deliveries.map((item) => item.truckReg)));
+    return Array.from(new Set(deliveries.map((item) => item.truckReg))).filter(Boolean);
   }, [deliveries]);
 
-  // Periodic Income Calculations (Today, This Week, This Month)
   const timePeriodStats = useMemo(() => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    
-    // Start of current week (last 7 days window)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(now.getDate() - 7);
-
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
 
@@ -64,17 +99,14 @@ export default function IncomeReport() {
       (acc, item) => {
         const itemDate = new Date(item.date);
 
-        // Today
         if (item.date === todayStr) {
           acc.todayIncome += item.income;
         }
 
-        // Last 7 Days
         if (itemDate >= sevenDaysAgo && itemDate <= now) {
           acc.weekIncome += item.income;
         }
 
-        // Current Month
         if (itemDate.getFullYear() === currentYear && itemDate.getMonth() === currentMonth) {
           acc.monthIncome += item.income;
         }
@@ -85,25 +117,23 @@ export default function IncomeReport() {
     );
   }, [deliveries]);
 
-  // Filtered dataset
   const filteredData = useMemo(() => {
     return deliveries.filter((item) => {
       const matchTruck = selectedTruck === 'All' || item.truckReg === selectedTruck;
       const matchSearch =
-        item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.truckReg.toLowerCase().includes(searchTerm.toLowerCase());
+        (item.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.invoiceNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.client || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.truckReg || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-      const itemDate = new Date(item.date);
-      const matchStart = !startDate || itemDate >= new Date(startDate);
-      const matchEnd = !endDate || itemDate <= new Date(endDate);
+      const itemDate = item.date ? new Date(item.date) : null;
+      const matchStart = !startDate || (itemDate && itemDate >= new Date(startDate));
+      const matchEnd = !endDate || (itemDate && itemDate <= new Date(endDate));
 
       return matchTruck && matchSearch && matchStart && matchEnd;
     });
   }, [deliveries, selectedTruck, searchTerm, startDate, endDate]);
 
-  // Aggregate KPI Calculations
   const metrics = useMemo(() => {
     return filteredData.reduce(
       (acc, item) => {
@@ -120,37 +150,73 @@ export default function IncomeReport() {
     );
   }, [filteredData]);
 
-  // Export to Excel / CSV function
   const handleExportExcel = () => {
     if (filteredData.length === 0) return;
 
-    const headers = ['Delivery ID', 'Invoice No', 'Date', 'Truck Reg', 'Client', 'Quantity (Tonnes)', 'Income (INR)', 'Received (INR)', 'Due (INR)', 'Expense (INR)', 'Status'];
+    const headers = [
+      'Delivery ID',
+      'Invoice No',
+      'Date',
+      'Truck Reg',
+      'Client',
+      'Quantity (Tonnes)',
+      'Income (INR)',
+      'Received (INR)',
+      'Due (INR)',
+      'Expense (INR)',
+      'Status',
+    ];
+
+    const escapeCsvValue = (value) => {
+      const safeValue = String(value ?? '').replace(/\r?\n/g, ' ');
+      return /[",]/.test(safeValue) ? `"${safeValue.replace(/"/g, '""')}"` : safeValue;
+    };
+
     const rows = filteredData.map((item) => [
       item.id,
       item.invoiceNo,
       item.date,
       item.truckReg,
-      `"${item.client}"`,
+      item.client,
       item.quantityTonnes,
       item.income,
       item.received,
       item.due,
       item.expense,
-      item.status
+      item.status,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [
+      headers.map(escapeCsvValue).join(','),
+      ...rows.map((row) => row.map(escapeCsvValue).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Income_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.href = url;
+    link.download = `Income_Report_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const handleDelete = (id) => {
-    setDeliveries((prev) => prev.filter((item) => item.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`/api/deliveries?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete delivery');
+      }
+
+      setDeliveries((prev) => prev.filter((item) => item.id !== id));
+      setActiveModalData(null);
+    } catch (error) {
+      console.error('Delete delivery error:', error);
+    }
   };
 
   const getStatusBadge = (status) => {

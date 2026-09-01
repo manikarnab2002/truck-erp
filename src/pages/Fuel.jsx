@@ -13,13 +13,33 @@ import {
 
 export default function Fuel() {
   const [fuelLogs, setFuelLogs] = useState([]);
+  const [truckOptions, setTruckOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     loadFuelLogs();
+    loadTruckOptions();
   }, []);
+
+  const loadTruckOptions = async () => {
+    try {
+      const response = await fetch('/api/trucks');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to load trucks.');
+
+      const options = Array.isArray(data)
+        ? data
+            .map((truck) => truck?.regNo?.trim())
+            .filter(Boolean)
+        : [];
+
+      setTruckOptions([...new Set(options)]);
+    } catch (error) {
+      console.error('Load truck options error:', error);
+    }
+  };
 
   const loadFuelLogs = async () => {
     try {
@@ -92,6 +112,7 @@ export default function Fuel() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddFuelLog={handleAddFuelLog}
+        truckOptions={truckOptions}
       />
 
       <div style={styles.filterCard}>
@@ -111,9 +132,9 @@ export default function Fuel() {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th style={styles.th}>Log ID</th>
+              {/* <th style={styles.th}>Log ID</th> */}
               <th style={styles.th}>Truck Reg No</th>
-              <th style={styles.th}>Quantity (Liters)</th>
+              <th style={styles.th}>Quantity (Per Trip)</th>
               <th style={styles.th}>Total Cost</th>
               <th style={styles.th}>Date</th>
               <th style={styles.th}>Action</th>
@@ -125,7 +146,7 @@ export default function Fuel() {
             ) : filteredLogs.length > 0 ? (
               filteredLogs.map((log) => (
                 <tr key={log.id} style={styles.tr}>
-                  <td style={styles.td}><strong>{log.id}</strong></td>
+                  {/* <td style={styles.td}><strong>{log.id}</strong></td> */}
                   <td style={styles.td}>{log.truckNo}</td>
                   <td style={styles.td}>{log.liters}</td>
                   <td style={styles.td}><strong>{log.totalCost}</strong></td>

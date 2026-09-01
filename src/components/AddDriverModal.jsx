@@ -12,13 +12,11 @@ export default function AddDriverModal({
   isOpen,
   onClose,
   onAddDriver,
+  truckOptions = [],
 }) {
   const initialFormState = {
     name: "",
     phone: "",
-    licenseNo: "",
-    licenseExpiry: "",
-    experience: "3 Yrs",
     assignedTruck: "Unassigned",
     status: "Available",
   };
@@ -47,10 +45,10 @@ export default function AddDriverModal({
 
     if (
       !formData.name.trim() ||
-      !formData.licenseNo.trim()
+      !formData.phone.trim()
     ) {
       alert(
-        "Please fill in Full Name and License Number."
+        "Please fill in Full Name and Phone Number."
       );
 
       return;
@@ -215,130 +213,9 @@ export default function AddDriverModal({
             </div>
 
 
-            {/* LICENSE */}
+            
 
-            <div style={styles.field}>
-
-              <label style={styles.label}>
-                Driving License No *
-              </label>
-
-              <div
-                style={
-                  styles.iconInputWrapper
-                }
-              >
-
-                <ShieldCheck
-                  size={16}
-                  color="#64748b"
-                  style={styles.inputIcon}
-                />
-
-                <input
-                  type="text"
-                  name="licenseNo"
-                  placeholder="e.g. WB-0420180012"
-                  value={formData.licenseNo}
-                  onChange={handleChange}
-                  required
-                  style={{
-                    ...styles.input,
-                    paddingLeft: "32px",
-                  }}
-                />
-
-              </div>
-
-            </div>
-
-
-            {/* LICENSE EXPIRY */}
-
-            <div style={styles.field}>
-
-              <label style={styles.label}>
-                License Expiry
-              </label>
-
-              <div
-                style={
-                  styles.iconInputWrapper
-                }
-              >
-
-                <Calendar
-                  size={16}
-                  color="#64748b"
-                  style={styles.inputIcon}
-                />
-
-                <input
-                  type="date"
-                  name="licenseExpiry"
-                  value={formData.licenseExpiry}
-                  onChange={handleChange}
-                  style={{
-                    ...styles.input,
-                    paddingLeft: "32px",
-                  }}
-                />
-
-              </div>
-
-            </div>
-
-
-            {/* EXPERIENCE */}
-
-            <div style={styles.field}>
-
-              <label style={styles.label}>
-                Experience
-              </label>
-
-              <select
-                name="experience"
-                value={formData.experience}
-                onChange={handleChange}
-                style={styles.select}
-              >
-
-                <option value="1 Yr">
-                  1 Yr
-                </option>
-
-                <option value="2 Yrs">
-                  2 Yrs
-                </option>
-
-                <option value="3 Yrs">
-                  3 Yrs
-                </option>
-
-                <option value="5 Yrs">
-                  5 Yrs
-                </option>
-
-                <option value="8 Yrs">
-                  8 Yrs
-                </option>
-
-                <option value="10 Yrs">
-                  10 Yrs
-                </option>
-
-                <option value="12 Yrs">
-                  12 Yrs
-                </option>
-
-                <option value="15+ Yrs">
-                  15+ Yrs
-                </option>
-
-              </select>
-
-            </div>
+            
 
 
             {/* ASSIGNED TRUCK */}
@@ -346,7 +223,7 @@ export default function AddDriverModal({
             <div style={styles.field}>
 
               <label style={styles.label}>
-                Assigned Truck
+                Assigned Truck Registration No.
               </label>
 
               <div
@@ -375,21 +252,11 @@ export default function AddDriverModal({
                     Unassigned
                   </option>
 
-                  <option value="WB-19-AX-4021">
-                    WB-19-AX-4021
-                  </option>
-
-                  <option value="WB-23-C-8812">
-                    WB-23-C-8812
-                  </option>
-
-                  <option value="MH-12-Q-5510">
-                    MH-12-Q-5510
-                  </option>
-
-                  <option value="DL-01-AB-9001">
-                    DL-01-AB-9001
-                  </option>
+                  {truckOptions.map((truckNo) => (
+                    <option key={truckNo} value={truckNo}>
+                      {truckNo}
+                    </option>
+                  ))}
 
                 </select>
 

@@ -43,23 +43,23 @@ export default async function handler(req, res) {
 
     if (req.method === "POST") {
 
+      const payload = req.body || {};
       const {
         name,
         phone,
-        licenseNo,
-        licenseExpiry,
         assignedTruck,
         experience,
         status
-      } = req.body;
+      } = payload;
 
+      const cleanName = typeof name === "string" ? name.trim() : "";
+      const cleanPhone = typeof phone === "string" ? phone.trim() : "";
 
       // Validation
 
       if (
-        !name ||
-        !phone ||
-        !licenseNo
+        !cleanName ||
+        !cleanPhone
       ) {
 
         return res.status(400).json({
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
           success: false,
 
           message:
-            "Name, phone and license number are required."
+            "Name and phone number are required."
 
         });
 
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
 
       const existingDriver =
         await drivers.findOne({
-          licenseNo: licenseNo
+          phone: cleanPhone
         });
 
 
@@ -115,16 +115,10 @@ export default async function handler(req, res) {
         id: driverId,
 
         name:
-          name.trim(),
+          cleanName,
 
         phone:
-          phone.trim(),
-
-        licenseNo:
-          licenseNo.trim(),
-
-        licenseExpiry:
-          licenseExpiry || "",
+          cleanPhone,
 
         assignedTruck:
           assignedTruck || "Unassigned",

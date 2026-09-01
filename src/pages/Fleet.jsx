@@ -136,6 +136,7 @@ export default function Fleet() {
             <tr>
               <th style={styles.th}>Truck ID</th>
               <th style={styles.th}>Reg Number</th>
+              <th style={styles.th}>Chassis Number</th>
               <th style={styles.th}>Vehicle Model</th>
               <th style={styles.th}>Type</th>
               <th style={styles.th}>Action</th>
@@ -149,6 +150,7 @@ export default function Fleet() {
                 <tr key={truck.id} style={styles.tr}>
                   <td style={styles.td}><strong>{truck.id}</strong></td>
                   <td style={styles.td}>{truck.regNo}</td>
+                  <td style={styles.td}>{truck.chassisNo || '-'}</td>
                   <td style={styles.td}>{truck.model}</td>
                   <td style={styles.td}>{truck.type}</td>
                   <td style={styles.td}>

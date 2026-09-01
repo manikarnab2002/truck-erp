@@ -18,8 +18,9 @@ export default async function handler(req, res) {
         ...truck,
         id: truck.id || truck._id?.toString() || `TRK-${Date.now()}`,
         regNo: truck.regNo || truck.truckNumber || "",
+        chassisNo: truck.chassisNo || "",
         model: truck.model || "",
-        type: truck.type || "Trailer",
+        type: truck.type || "Open_Truck",
         date: truck.date || truck.registeredDate || "",
       }));
 
@@ -28,16 +29,28 @@ export default async function handler(req, res) {
 
     // POST
     if (req.method === "POST") {
-      const { regNo, model, type, date } = req.body;
+      const payload = req.body || {};
+      const {
+        regNo,
+        chassisNo,
+        model,
+        type,
+        date,
+      } = payload;
 
-      if (!regNo?.trim() || !model?.trim()) {
+      const cleanRegNo = typeof regNo === "string" ? regNo.trim() : "";
+      const cleanModel = typeof model === "string" ? model.trim() : "";
+      const cleanChassisNo =
+        typeof chassisNo === "string" ? chassisNo.trim() : "";
+
+      if (!cleanRegNo || !cleanModel) {
         return res.status(400).json({
           success: false,
           message: "Registration number and model are required",
         });
       }
 
-      const existingTruck = await trucks.findOne({ regNo: regNo.trim() });
+      const existingTruck = await trucks.findOne({ regNo: cleanRegNo });
 
       if (existingTruck) {
         return res.status(409).json({
@@ -48,9 +61,10 @@ export default async function handler(req, res) {
 
       const truck = {
         id: `TRK-${Date.now()}`,
-        regNo: regNo.trim(),
-        model: model.trim(),
-        type: type || "Trailer",
+        regNo: cleanRegNo,
+        chassisNo: cleanChassisNo,
+        model: cleanModel,
+        type: type || "Open_Truck",
         date: date || "",
         createdAt: new Date(),
         updatedAt: new Date(),

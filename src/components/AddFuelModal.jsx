@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Fuel, DollarSign, Calendar, Gauge, User, MapPin } from 'lucide-react';
 
-export default function AddFuelModal({ isOpen, onClose, onAddFuelLog }) {
+export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptions = [] }) {
   const initialFormState = {
     truckNo: '',
     driver: '',
@@ -14,6 +14,12 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog }) {
   };
 
   const [formData, setFormData] = useState(initialFormState);
+
+  React.useEffect(() => {
+    if (truckOptions.length && !formData.truckNo) {
+      setFormData((prev) => ({ ...prev, truckNo: truckOptions[0] }));
+    }
+  }, [truckOptions, formData.truckNo]);
 
   if (!isOpen) return null;
 
@@ -58,15 +64,20 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog }) {
           <div style={styles.formGrid}>
             <div style={styles.field}>
               <label style={styles.label}>Truck Registration No *</label>
-              <input
-                type="text"
+              <select
                 name="truckNo"
-                placeholder="e.g. WB-19-AX-4021"
                 value={formData.truckNo}
                 onChange={handleChange}
                 required
-                style={styles.input}
-              />
+                style={styles.select}
+              >
+                <option value="">Select registration number</option>
+                {truckOptions.map((truckNo) => (
+                  <option key={truckNo} value={truckNo}>
+                    {truckNo}
+                  </option>
+                ))}
+              </select>
             </div>
 
             
@@ -147,6 +158,7 @@ const styles = {
   fieldFull: { gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '6px' },
   label: { fontSize: '12px', fontWeight: '600', color: '#475569' },
   input: { padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', width: '100%', boxSizing: 'border-box' },
+  select: { padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', width: '100%', backgroundColor: '#ffffff', boxSizing: 'border-box' },
   iconInputWrapper: { position: 'relative', display: 'flex', alignItems: 'center' },
   inputIcon: { position: 'absolute', left: '10px', pointerEvents: 'none' },
   footer: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' },
