@@ -132,6 +132,7 @@ export default function Fuel() {
         <table style={styles.table}>
           <thead>
             <tr>
+              
               {/* <th style={styles.th}>Log ID</th> */}
               <th style={styles.th}>Truck Reg No</th>
               <th style={styles.th}>Quantity (Per Trip)</th>
