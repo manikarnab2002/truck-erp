@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import AddFuelModal from '../components/AddFuelModal';
+import { exportCsv } from '../utils/exportCsv';
 import { 
   Fuel as FuelIcon, 
   Plus, 
@@ -95,6 +96,20 @@ export default function Fuel() {
     );
   });
 
+  const handleExportExcel = () => {
+    const headers = ['Truck Reg No', 'Quantity (Liters)', 'Total Cost', 'Kilometers', 'Date', 'Driver', 'Station'];
+    const rows = filteredLogs.map((log) => [
+      log.truckNo,
+      log.liters,
+      log.totalCost,
+      log.odometer || 'N/A',
+      log.date,
+      log.driver,
+      log.station,
+    ]);
+    exportCsv(`Fuel_Logs_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -105,6 +120,9 @@ export default function Fuel() {
         <button style={styles.primaryBtn} onClick={() => setIsModalOpen(true)}>
           <Plus size={16} />
           <span>Add Fuel Log</span>
+        </button>
+        <button style={styles.exportBtn} onClick={handleExportExcel}>
+          Export Excel
         </button>
       </div>
 
@@ -184,6 +202,7 @@ const styles = {
   title: { fontSize: '22px', color: '#0f172a', fontWeight: '700' },
   subtitle: { fontSize: '13px', color: '#64748b', marginTop: '2px' },
   primaryBtn: { display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#1e293b', color: '#ffffff', padding: '10px 16px', borderRadius: '6px', border: 'none', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
+  exportBtn: { display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#047857', color: '#ffffff', padding: '10px 16px', borderRadius: '6px', border: 'none', fontWeight: '600', fontSize: '13px', cursor: 'pointer' },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' },
   card: { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#64748b' },

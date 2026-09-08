@@ -26,35 +26,46 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
+import { exportCsv } from '../utils/exportCsv';
 
 const normalizeDeliveryRecord = (item) => {
   const amountPaid = Number(item.amountPaid ?? item.advancePaid ?? item.received ?? 0);
   const deliveryCost = Number(item.deliveryCost ?? item.income ?? 0);
   const dueAmount = Number(item.dueAmount ?? item.due ?? Math.max(deliveryCost - amountPaid, 0));
-  const totalExpense = Number(item.totalExpense ?? item.expense ?? 0);
+  const fuelCost = Number(item.fuelCost || 0);
+  const tollCost = Number(item.tollCost || 0);
+  const maintenanceCost = Number(item.maintenanceCost || 0);
+  const driverSalary = Number(item.driverSalary || 0);
+  const totalExpense = Number(
+    item.totalExpense ?? item.expense ?? fuelCost + tollCost + maintenanceCost + driverSalary
+  );
   const quantityTonnes = Number(item.quantity ?? item.quantityTonnes ?? 0);
   const date = item.deliveryDate || item.goingDate || item.date || '';
-  const status = dueAmount > 0 ? (amountPaid > 0 ? 'Partial' : 'Pending') : 'Paid';
+  const paymentStatus = dueAmount > 0 ? (amountPaid > 0 ? 'Partial' : 'Pending') : 'Paid';
+  const operationalStatus = item.status || 'In Transit';
+  const goingSource = item.goingSource || item.source || '';
+  const goingDestination = item.goingDestination || item.destination || '';
 
   return {
     id: item._id ? String(item._id) : (item.id || 'DEL-000'),
     invoiceNo: item.invoiceNo || `INV-${String(item._id || '').slice(-6) || '000001'}`,
     date,
     truckReg: item.truckNumber || item.truckReg || '',
-    client:
-      item.client ||
-      item.source ||
-      item.goingSource ||
-      item.destination ||
-      item.goingDestination ||
-      item.material ||
-      'Client',
+    driverName: item.driverName || '',
+    client: item.client || item.material || 'Client',
+    goingSource,
+    goingDestination,
+    comingDate: item.comingDate || '',
+    comingSource: item.comingSource || '',
+    comingDestination: item.comingDestination || '',
     quantityTonnes,
     income: deliveryCost,
     received: amountPaid,
     due: dueAmount,
     expense: totalExpense,
-    status,
+    netIncome: Number(item.netIncome ?? item.netProfit ?? deliveryCost - totalExpense),
+    operationalStatus,
+    paymentStatus,
     raw: item,
   };
 };
@@ -158,8 +169,6 @@ export default function IncomeReport() {
   }, [filteredData]);
 
   const handleExportExcel = () => {
-    if (filteredData.length === 0) return;
-
     const headers = [
       'Delivery ID',
       'Invoice No',
@@ -171,13 +180,12 @@ export default function IncomeReport() {
       'Received (INR)',
       'Due (INR)',
       'Expense (INR)',
-      'Status',
+      'Net Income (INR)',
+      'Delivery Status',
+      'Payment Status',
+      'Going Route',
+      'Coming Route',
     ];
-
-    const escapeCsvValue = (value) => {
-      const safeValue = String(value ?? '').replace(/\r?\n/g, ' ');
-      return /[",]/.test(safeValue) ? `"${safeValue.replace(/"/g, '""')}"` : safeValue;
-    };
 
     const rows = filteredData.map((item) => [
       item.id,
@@ -190,23 +198,13 @@ export default function IncomeReport() {
       item.received,
       item.due,
       item.expense,
-      item.status,
+      item.netIncome,
+      item.operationalStatus,
+      item.paymentStatus,
+      `${item.goingSource} -> ${item.goingDestination}`,
+      `${item.comingDate}: ${item.comingSource} -> ${item.comingDestination}`,
     ]);
-
-    const csvContent = [
-      headers.map(escapeCsvValue).join(','),
-      ...rows.map((row) => row.map(escapeCsvValue).join(',')),
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Income_Report_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportCsv(`Income_Report_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
   };
 
   const handleDelete = async (id) => {
@@ -343,13 +341,14 @@ export default function IncomeReport() {
               <th style={styles.th}>Gross Income</th>
               <th style={styles.th}>Received</th>
               <th style={styles.th}>Due</th>
+              <th style={styles.th}>Status</th>
               <th style={styles.th}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredData.length > 0 ? (
               filteredData.map((item) => {
-                const statusStyle = getStatusBadge(item.status);
+                const statusStyle = getStatusBadge(item.paymentStatus);
                 return (
                   <tr key={item.id} style={styles.tr}>
                     <td style={styles.td}>
@@ -358,12 +357,25 @@ export default function IncomeReport() {
                     </td>
                     <td style={styles.td}>{item.date}</td>
                     <td style={styles.td}>{item.truckReg}</td>
-                    <td style={styles.td}>{item.client}</td>
+                    <td style={styles.td}>
+                      <strong>{item.goingSource || item.client}</strong>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                        → {item.goingDestination || '-'}
+                      </div>
+                    </td>
                     <td style={styles.td}>{item.quantityTonnes} MT</td>
                     <td style={styles.td}><strong>₹{item.income.toLocaleString()}</strong></td>
                     <td style={{ ...styles.td, color: '#15803d' }}>₹{item.received.toLocaleString()}</td>
                     <td style={{ ...styles.td, color: item.due > 0 ? '#b91c1c' : '#64748b' }}>
                       ₹{item.due.toLocaleString()}
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{ ...styles.badge, backgroundColor: statusStyle.bg, color: statusStyle.text }}>
+                        {item.operationalStatus}
+                      </span>
+                      <div style={{ fontSize: '11px', color: statusStyle.text, marginTop: '4px' }}>
+                        {item.paymentStatus}
+                      </div>
                     </td>
                     {/*  */}
                     <td style={styles.td}>
@@ -412,13 +424,16 @@ export default function IncomeReport() {
               <div style={styles.detailRow}><span>Invoice No:</span><strong>{activeModalData.invoiceNo}</strong></div>
               <div style={styles.detailRow}><span>Date:</span><strong>{activeModalData.date}</strong></div>
               <div style={styles.detailRow}><span>Assigned Truck:</span><strong>{activeModalData.truckReg}</strong></div>
-              <div style={styles.detailRow}><span>Client Name:</span><strong>{activeModalData.client}</strong></div>
+              <div style={styles.detailRow}><span>Driver:</span><strong>{activeModalData.driverName || '-'}</strong></div>
+              <div style={styles.detailRow}><span>Going Route:</span><strong>{activeModalData.goingSource || '-'} → {activeModalData.goingDestination || '-'}</strong></div>
+              <div style={styles.detailRow}><span>Coming Route:</span><strong>{activeModalData.comingDate || '-'}: {activeModalData.comingSource || '-'} → {activeModalData.comingDestination || '-'}</strong></div>
               <div style={styles.detailRow}><span>Load Weight:</span><strong>{activeModalData.quantityTonnes} Tonnes</strong></div>
               <div style={styles.detailRow}><span>Billed Income:</span><strong>₹{activeModalData.income.toLocaleString()}</strong></div>
               <div style={styles.detailRow}><span>Trip Expenses:</span><strong style={{ color: '#ea580c' }}>₹{activeModalData.expense.toLocaleString()}</strong></div>
-              <div style={styles.detailRow}><span>Net Earnings:</span><strong style={{ color: '#16a34a' }}>₹{(activeModalData.income - activeModalData.expense).toLocaleString()}</strong></div>
+              <div style={styles.detailRow}><span>Net Earnings:</span><strong style={{ color: '#16a34a' }}>₹{activeModalData.netIncome.toLocaleString()}</strong></div>
               <div style={styles.detailRow}><span>Amount Paid:</span><strong style={{ color: '#15803d' }}>₹{activeModalData.received.toLocaleString()}</strong></div>
               <div style={styles.detailRow}><span>Outstanding Due:</span><strong style={{ color: '#b91c1c' }}>₹{activeModalData.due.toLocaleString()}</strong></div>
+              <div style={styles.detailRow}><span>Delivery Status:</span><strong>{activeModalData.operationalStatus}</strong></div>
             </div>
           </div>
         </div>

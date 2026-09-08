@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AddDriverModal from "../components/AddDriverModal";
+import { exportCsv } from "../utils/exportCsv";
 
 import {
   Plus,
@@ -330,6 +331,19 @@ export default function Drivers() {
 
     });
 
+  const handleExportExcel = () => {
+    const headers = ['Driver ID', 'Full Name', 'Contact Number', 'License Number', 'Assigned Truck', 'Status'];
+    const rows = filteredDrivers.map((driver) => [
+      driver.id,
+      driver.name,
+      driver.phone,
+      driver.licenseNo,
+      driver.assignedTruck || 'Unassigned',
+      driver.status || 'Available',
+    ]);
+    exportCsv(`Drivers_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+  };
+
 
   // ==========================================
   // STATUS BADGE
@@ -434,6 +448,12 @@ export default function Drivers() {
             Add New Driver
           </span>
 
+        </button>
+        <button
+          style={styles.exportBtn}
+          onClick={handleExportExcel}
+        >
+          Export Excel
         </button>
 
       </div>
@@ -904,6 +924,19 @@ const styles = {
 
     whiteSpace: "nowrap",
 
+  },
+  exportBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    backgroundColor: "#047857",
+    color: "#ffffff",
+    padding: "10px 16px",
+    borderRadius: "6px",
+    border: "none",
+    fontWeight: "600",
+    fontSize: "13px",
+    cursor: "pointer",
   },
 
 

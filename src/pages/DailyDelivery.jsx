@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import FormGroup from "../components/FormGroup";
+import { exportCsv } from "../utils/exportCsv";
 import {
   Truck,
   MapPin,
@@ -184,6 +185,58 @@ export default function DailyDelivery() {
 
   const handleReset = () => {
     setFormData(emptyForm);
+  };
+
+  const handleExportExcel = () => {
+    const headers = [
+      "Going Date",
+      "Truck Reg No",
+      "Driver",
+      "Going Source",
+      "Going Destination",
+      "Coming Date",
+      "Coming Source",
+      "Coming Destination",
+      "Material",
+      "Quantity",
+      "Unit",
+      "Delivery Cost",
+      "Advance",
+      "Due",
+      "Fuel Cost",
+      "Toll Cost",
+      "Maintenance Cost",
+      "Driver Salary",
+      "Total Expense",
+      "Net Profit",
+      "Status",
+      "Notes",
+    ];
+    const rows = deliveries.map((delivery) => [
+      delivery.goingDate || delivery.deliveryDate || "",
+      delivery.truckNumber,
+      delivery.driverName,
+      delivery.goingSource || delivery.source,
+      delivery.goingDestination || delivery.destination,
+      delivery.comingDate,
+      delivery.comingSource,
+      delivery.comingDestination,
+      delivery.material,
+      delivery.quantity,
+      delivery.quantityUnit,
+      delivery.deliveryCost,
+      delivery.advancePaid ?? delivery.amountPaid,
+      delivery.dueAmount,
+      delivery.fuelCost,
+      delivery.tollCost,
+      delivery.maintenanceCost,
+      delivery.driverSalary,
+      delivery.totalExpense,
+      delivery.netProfit ?? delivery.netIncome,
+      delivery.status,
+      delivery.notes,
+    ]);
+    exportCsv(`Daily_Deliveries_${new Date().toISOString().split("T")[0]}.csv`, headers, rows);
   };
 
   return (
@@ -595,7 +648,12 @@ export default function DailyDelivery() {
             <h2 style={styles.recordsTitle}>Daily Delivery Records</h2>
             <p style={styles.recordsSubtitle}>View all delivery records added today.</p>
           </div>
-          <div style={styles.recordCount}>{deliveries.length} Records</div>
+          <div style={styles.recordsActions}>
+            <button type="button" style={styles.exportBtn} onClick={handleExportExcel}>
+              Export Excel
+            </button>
+            <div style={styles.recordCount}>{deliveries.length} Records</div>
+          </div>
         </div>
 
         {loading ? (
@@ -993,6 +1051,21 @@ const styles = {
     borderRadius: "20px",
     fontSize: "11px",
     fontWeight: "700",
+  },
+  recordsActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  exportBtn: {
+    padding: "8px 12px",
+    border: "none",
+    backgroundColor: "#047857",
+    color: "#ffffff",
+    borderRadius: "6px",
+    fontSize: "12px",
+    fontWeight: "600",
+    cursor: "pointer",
   },
   tableWrapper: {
     width: "100%",

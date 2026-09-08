@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import AddTruckModal from '../components/AddTruckModal';
+import { exportCsv } from '../utils/exportCsv';
 import { Search, Plus } from 'lucide-react';
 
 const normalizeTruck = (truck, index = 0) => {
@@ -98,6 +99,20 @@ export default function Fleet() {
       .some((value) => String(value || '').toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
+  const handleExportExcel = () => {
+    const headers = ['Truck ID', 'Reg Number', 'Chassis Number', 'Vehicle Model', 'Type', 'Driver', 'Status'];
+    const rows = filteredFleet.map((truck) => [
+      truck.id,
+      truck.regNo,
+      truck.chassisNo,
+      truck.model,
+      truck.type,
+      truck.driver,
+      truck.status,
+    ]);
+    exportCsv(`Fleet_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -108,6 +123,9 @@ export default function Fleet() {
         <button style={styles.primaryBtn} onClick={() => setIsModalOpen(true)}>
           <Plus size={16} />
           <span>Add New Truck</span>
+        </button>
+        <button style={styles.exportBtn} onClick={handleExportExcel}>
+          Export Excel
         </button>
       </div>
 
@@ -203,6 +221,19 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     backgroundColor: '#1e293b',
+    color: '#ffffff',
+    padding: '10px 16px',
+    borderRadius: '6px',
+    border: 'none',
+    fontWeight: '600',
+    fontSize: '13px',
+    cursor: 'pointer',
+  },
+  exportBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: '#047857',
     color: '#ffffff',
     padding: '10px 16px',
     borderRadius: '6px',
