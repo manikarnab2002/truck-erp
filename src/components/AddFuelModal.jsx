@@ -122,6 +122,7 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
                   name="odometer"
                   placeholder="e.g. 125000"
                   value={formData.odometer}
+                  
                   onChange={handleChange}
                   min="0"
                   style={{ ...styles.input, paddingLeft: '32px' }}

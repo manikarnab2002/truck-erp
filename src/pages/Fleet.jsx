@@ -152,6 +152,7 @@ export default function Fleet() {
         <table style={styles.table}>
           <thead>
             <tr>
+              
               <th style={styles.th}>Truck ID</th>
               <th style={styles.th}>Reg Number</th>
               <th style={styles.th}>Chassis Number</th>

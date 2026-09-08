@@ -650,6 +650,8 @@ export default function Drivers() {
 
                       {/* NAME */}
 
+                      
+
                       <td style={styles.td}>
 
                         <strong

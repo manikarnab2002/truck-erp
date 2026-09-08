@@ -133,6 +133,7 @@ export default function Fuel() {
         truckOptions={truckOptions}
       />
 
+
       <div style={styles.filterCard}>
         <div style={styles.searchBox}>
           <Search size={16} color="#64748b" />
