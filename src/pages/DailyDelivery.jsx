@@ -18,6 +18,7 @@ const emptyForm = {
   // Truck Info
   truckNumber: "",
   driverName: "",
+  
   status: "In Transit",
 
   // Delivery Route - Going
