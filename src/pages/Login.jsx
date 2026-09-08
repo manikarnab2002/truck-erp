@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, ShieldCheck, RefreshCw, LogIn } from 'lucide-react';
+import { User, Lock, ShieldCheck, RefreshCw, LogIn, Eye, EyeOff } from 'lucide-react';
 
 const VALID_USER_ID = 'saikat@gmail.com';
 const VALID_PASSWORD = 'Saikat@2002#';
-const MAX_LOGIN_ATTEMPTS = 5;
+const MAX_LOGIN_ATTEMPTS = 10;
 const LOGIN_ATTEMPTS_KEY = 'truckErpLoginAttempts';
 const SESSION_KEY = 'truckErpSession';
 
@@ -20,6 +20,7 @@ const createCaptchaCode = () => {
 export default function Login() {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [captchaInput, setCaptchaInput] = useState('');
   const [captchaCode, setCaptchaCode] = useState(createCaptchaCode);
   const [errorMessage, setErrorMessage] = useState('');
@@ -115,12 +116,24 @@ export default function Login() {
             <div style={styles.inputWrapper}>
               <Lock size={16} color="#94a3b8" style={styles.icon} />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={styles.input}
+                style={{ ...styles.input, paddingRight: '38px' }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                style={styles.eyeBtn}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff size={16} color="#94a3b8" />
+                ) : (
+                  <Eye size={16} color="#94a3b8" />
+                )}
+              </button>
             </div>
           </div>
 
@@ -254,6 +267,17 @@ const styles = {
     outline: 'none',
     boxSizing: 'border-box',
     transition: 'border-color 0.2s',
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: '10px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '4px',
   },
   captchaRow: {
     display: 'flex',

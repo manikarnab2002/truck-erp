@@ -38,19 +38,20 @@ export default async function handler(req, res) {
 
     if (startDate || endDate) {
 
-      filter.deliveryDate = {};
+      filter.$or = [
+        { deliveryDate: {} },
+        { goingDate: {} },
+      ];
 
       if (startDate) {
-
-        filter.deliveryDate.$gte =
-          startDate;
+        filter.$or[0].deliveryDate.$gte = startDate;
+        filter.$or[1].goingDate.$gte = startDate;
 
       }
 
       if (endDate) {
-
-        filter.deliveryDate.$lte =
-          endDate;
+        filter.$or[0].deliveryDate.$lte = endDate;
+        filter.$or[1].goingDate.$lte = endDate;
 
       }
 
@@ -72,6 +73,7 @@ export default async function handler(req, res) {
         .find(filter)
         .sort({
           deliveryDate: -1,
+          goingDate: -1,
         })
         .toArray();
 
@@ -107,7 +109,7 @@ export default async function handler(req, res) {
 
       const paid =
         Number(
-          record.amountPaid || 0
+          record.amountPaid ?? record.advancePaid ?? 0
         );
 
       const due =
@@ -130,6 +132,8 @@ export default async function handler(req, res) {
           record.maintenanceCost || 0
         );
 
+      const driverSalary = Number(record.driverSalary || 0);
+
 
       totalIncome += income;
 
@@ -147,13 +151,15 @@ export default async function handler(req, res) {
       totalExpense +=
         fuel +
         toll +
-        maintenance;
+        maintenance +
+        driverSalary;
 
       netIncome +=
         income -
         fuel -
         toll -
-        maintenance;
+        maintenance -
+        driverSalary;
 
 
       totalQuantity +=
@@ -205,13 +211,15 @@ export default async function handler(req, res) {
       truckIncome[truck].expenses +=
         fuel +
         toll +
-        maintenance;
+        maintenance +
+        driverSalary;
 
       truckIncome[truck].netIncome +=
         income -
         fuel -
         toll -
-        maintenance;
+        maintenance -
+        driverSalary;
 
       truckIncome[truck].deliveries++;
 

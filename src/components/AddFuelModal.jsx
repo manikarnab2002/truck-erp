@@ -113,6 +113,22 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
               </div>
             </div>
 
+            <div style={styles.field}>
+              <label style={styles.label}>Odometer (Kilometers)</label>
+              <div style={styles.iconInputWrapper}>
+                <Gauge size={16} color="#64748b" style={styles.inputIcon} />
+                <input
+                  type="number"
+                  name="odometer"
+                  placeholder="e.g. 125000"
+                  value={formData.odometer}
+                  onChange={handleChange}
+                  min="0"
+                  style={{ ...styles.input, paddingLeft: '32px' }}
+                />
+              </div>
+            </div>
+
             
             <div style={styles.field}>
               <label style={styles.label}>Refill Date</label>

@@ -15,7 +15,7 @@ const buildMonthlyChartData = (records = []) => {
   const monthMap = new Map();
 
   records.forEach((record) => {
-    const rawDate = record.deliveryDate || record.createdAt || record.date;
+    const rawDate = record.deliveryDate || record.goingDate || record.createdAt || record.date;
     const date = new Date(rawDate);
 
     if (Number.isNaN(date.getTime())) {
@@ -41,11 +41,12 @@ const buildMonthlyChartData = (records = []) => {
     const expense =
       Number(record.fuelCost || 0) +
       Number(record.tollCost || 0) +
-      Number(record.maintenanceCost || 0);
+      Number(record.maintenanceCost || 0) +
+      Number(record.driverSalary || 0);
 
     item.income += income;
     item.expense += expense;
-    item.profit += Number(record.netIncome ?? income - expense);
+    item.profit += Number(record.netIncome ?? record.netProfit ?? income - expense);
     item.deliveries += 1;
   });
 

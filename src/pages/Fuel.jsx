@@ -136,13 +136,14 @@ export default function Fuel() {
               <th style={styles.th}>Truck Reg No</th>
               <th style={styles.th}>Quantity (Per Trip)</th>
               <th style={styles.th}>Total Cost</th>
+              <th style={styles.th}>Kilometers</th>
               <th style={styles.th}>Date</th>
               <th style={styles.th}>Action</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center' }}>Loading fuel logs...</td></tr>
+              <tr><td colSpan="7" style={{ ...styles.td, textAlign: 'center' }}>Loading fuel logs...</td></tr>
             ) : filteredLogs.length > 0 ? (
               filteredLogs.map((log) => (
                 <tr key={log.id} style={styles.tr}>
@@ -150,6 +151,7 @@ export default function Fuel() {
                   <td style={styles.td}>{log.truckNo}</td>
                   <td style={styles.td}>{log.liters}</td>
                   <td style={styles.td}><strong>{log.totalCost}</strong></td>
+                  <td style={styles.td}>{log.odometer || 'N/A'}</td>
                   <td style={styles.td}>{log.date}</td>
                   <td style={styles.td}>
                     <button
@@ -163,7 +165,7 @@ export default function Fuel() {
               ))
             ) : (
               <tr>
-                <td colSpan="6" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '24px' }}>
+                <td colSpan="7" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '24px' }}>
                   No matching fuel logs found.
                 </td>
               </tr>

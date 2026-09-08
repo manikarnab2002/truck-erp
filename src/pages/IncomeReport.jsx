@@ -28,12 +28,12 @@ import {
 } from 'recharts';
 
 const normalizeDeliveryRecord = (item) => {
-  const amountPaid = Number(item.amountPaid ?? item.received ?? 0);
+  const amountPaid = Number(item.amountPaid ?? item.advancePaid ?? item.received ?? 0);
   const deliveryCost = Number(item.deliveryCost ?? item.income ?? 0);
   const dueAmount = Number(item.dueAmount ?? item.due ?? Math.max(deliveryCost - amountPaid, 0));
   const totalExpense = Number(item.totalExpense ?? item.expense ?? 0);
   const quantityTonnes = Number(item.quantity ?? item.quantityTonnes ?? 0);
-  const date = item.deliveryDate || item.date || '';
+  const date = item.deliveryDate || item.goingDate || item.date || '';
   const status = dueAmount > 0 ? (amountPaid > 0 ? 'Partial' : 'Pending') : 'Paid';
 
   return {
@@ -41,7 +41,14 @@ const normalizeDeliveryRecord = (item) => {
     invoiceNo: item.invoiceNo || `INV-${String(item._id || '').slice(-6) || '000001'}`,
     date,
     truckReg: item.truckNumber || item.truckReg || '',
-    client: item.client || item.source || item.destination || item.material || 'Client',
+    client:
+      item.client ||
+      item.source ||
+      item.goingSource ||
+      item.destination ||
+      item.goingDestination ||
+      item.material ||
+      'Client',
     quantityTonnes,
     income: deliveryCost,
     received: amountPaid,

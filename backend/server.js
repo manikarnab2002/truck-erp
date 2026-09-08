@@ -555,7 +555,7 @@ app.get("/api/deliveries", async (req, res) => {
     const deliveries = await db
       .collection("deliveries")
       .find({})
-      .sort({ deliveryDate: -1, createdAt: -1 })
+      .sort({ goingDate: -1, deliveryDate: -1, createdAt: -1 })
       .toArray();
 
     res.status(200).json(deliveries);
@@ -572,6 +572,12 @@ app.post("/api/deliveries", async (req, res) => {
   try {
     const {
       deliveryDate,
+      goingDate,
+      goingSource,
+      goingDestination,
+      comingDate,
+      comingSource,
+      comingDestination,
       truckName,
       truckNumber,
       driverName,
@@ -582,16 +588,22 @@ app.post("/api/deliveries", async (req, res) => {
       quantityUnit,
       deliveryCost,
       amountPaid,
+      advancePaid,
       fuelCost,
       tollCost,
       maintenanceCost,
+      driverSalary,
       status,
       maintenanceType,
       maintenanceDetails,
       notes,
     } = req.body;
 
-    if (!deliveryDate || !truckName || !truckNumber || !driverName || !source || !destination) {
+    const recordDate = deliveryDate || goingDate;
+    const recordSource = goingSource || source;
+    const recordDestination = goingDestination || destination;
+
+    if (!recordDate || !truckNumber || !driverName || !recordSource || !recordDestination) {
       return res.status(400).json({
         success: false,
         message: "Date, truck, driver, source, and destination are required.",
@@ -599,30 +611,40 @@ app.post("/api/deliveries", async (req, res) => {
     }
 
     const income = Number(deliveryCost || 0);
-    const paid = Number(amountPaid || 0);
+    const paid = Number(amountPaid ?? advancePaid ?? 0);
     const fuel = Number(fuelCost || 0);
     const toll = Number(tollCost || 0);
     const maintenance = Number(maintenanceCost || 0);
-    const totalExpense = fuel + toll + maintenance;
+    const salary = Number(driverSalary || 0);
+    const totalExpense = fuel + toll + maintenance + salary;
 
     const delivery = {
-      deliveryDate,
-      truckName: truckName.trim(),
+      deliveryDate: recordDate,
+      goingDate: recordDate,
+      truckName: truckName?.trim() || "",
       truckNumber: truckNumber.trim(),
       driverName: driverName.trim(),
-      source: source.trim(),
-      destination: destination.trim(),
+      source: recordSource.trim(),
+      destination: recordDestination.trim(),
+      goingSource: recordSource.trim(),
+      goingDestination: recordDestination.trim(),
+      comingDate: comingDate || "",
+      comingSource: comingSource || "",
+      comingDestination: comingDestination || "",
       material: material?.trim() || "",
       quantity: Number(quantity || 0),
       quantityUnit: quantityUnit || "Ton",
       deliveryCost: income,
       amountPaid: paid,
+      advancePaid: paid,
       dueAmount: Math.max(income - paid, 0),
       fuelCost: fuel,
       tollCost: toll,
       maintenanceCost: maintenance,
+      driverSalary: salary,
       totalExpense,
       netIncome: income - totalExpense,
+      netProfit: income - totalExpense,
       status: status || "In Transit",
       maintenanceType: maintenanceType || "",
       maintenanceDetails: maintenanceDetails || "",
