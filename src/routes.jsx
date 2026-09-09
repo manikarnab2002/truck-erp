@@ -10,6 +10,7 @@ import Logout from './components/LogoutModal';
 import Login from './pages/Login';
 import DailyDelivery from './pages/DailyDelivery';
 import IncomeReport from './pages/IncomeReport';
+import Stuff_payment from './pages/Stuff_payment';
 
 // Simple local views kept for routing structure
 const Overview = () => (
@@ -50,6 +51,7 @@ export default function AppRoutes() {
         <Route path="drivers" element={<Drivers />} />
         <Route path="fuel" element={<Fuel />} />
         <Route path="income-report" element={<IncomeReport />} />
+        <Route path="stuff-payment" element={<Stuff_payment />} />
         <Route path="logout" element={<Logout />} />
       </Route>
     </Routes>

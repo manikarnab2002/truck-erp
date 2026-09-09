@@ -14,7 +14,9 @@ import {
   X,
   Download,
   CalendarDays,
-  CalendarRange
+  CalendarRange,
+  Users,
+  Wallet
 } from 'lucide-react';
 import {
   BarChart,
@@ -40,7 +42,13 @@ const normalizeDeliveryRecord = (item) => {
   const totalExpense = Number(
     item.totalExpense ?? item.expense ?? fuelCost + tollCost + maintenanceCost + driverSalary
   );
-  const quantityTonnes = Number(item.quantity ?? item.quantityTonnes ?? 0);
+  
+  // Follows Truck ERP rule: net_profit = deliveryCost - totalExpense - dueAmount
+  const calculatedNetProfit = Number(
+    item.net_profit ?? item.netIncome ?? item.netProfit ?? (deliveryCost - totalExpense - dueAmount)
+  );
+  
+  const quantityTonnes = Number(item.quantity ?? item.quantityTonnes ?? item.goingQuantity ?? 0);
   const date = item.deliveryDate || item.goingDate || item.date || '';
   const paymentStatus = dueAmount > 0 ? (amountPaid > 0 ? 'Partial' : 'Pending') : 'Paid';
   const operationalStatus = item.status || 'In Transit';
@@ -56,15 +64,18 @@ const normalizeDeliveryRecord = (item) => {
     client: item.client || item.material || 'Client',
     goingSource,
     goingDestination,
+    goingMaterial: item.going_material || item.goingMaterial || '-',
+    goingQuantity: Number(item.goingQuantity ?? quantityTonnes),
     comingDate: item.comingDate || '',
     comingSource: item.comingSource || '',
     comingDestination: item.comingDestination || '',
-    quantityTonnes,
+    comingMaterial: item.coming_material || item.comingMaterial || '-',
+    comingQuantity: Number(item.comingQuantity || 0),
     income: deliveryCost,
     received: amountPaid,
     due: dueAmount,
     expense: totalExpense,
-    netIncome: Number(item.netIncome ?? item.netProfit ?? deliveryCost - totalExpense),
+    netIncome: calculatedNetProfit,
     operationalStatus,
     paymentStatus,
     raw: item,
@@ -73,6 +84,7 @@ const normalizeDeliveryRecord = (item) => {
 
 export default function IncomeReport() {
   const [deliveries, setDeliveries] = useState([]);
+  const [staffPayments, setStaffPayments] = useState([]);
   const [selectedTruck, setSelectedTruck] = useState('All');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -80,62 +92,58 @@ export default function IncomeReport() {
   const [activeModalData, setActiveModalData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Fetch both Income & Staff Payments
   useEffect(() => {
-    const loadIncomeData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/income');
-        if (!response.ok) {
-          throw new Error('Failed to fetch income data');
+        setLoading(true);
+        const [incomeRes, staffRes] = await Promise.all([
+          fetch('/api/income'),
+          fetch('/api/staff-payments')
+        ]);
+
+        if (incomeRes.ok) {
+          const incomeData = await incomeRes.json();
+          const records = Array.isArray(incomeData?.records)
+            ? incomeData.records
+            : Array.isArray(incomeData)
+            ? incomeData
+            : [];
+          setDeliveries(records.map(normalizeDeliveryRecord));
         }
 
-        const data = await response.json();
-        const records = Array.isArray(data?.records) ? data.records : Array.isArray(data) ? data : [];
-        setDeliveries(records.map(normalizeDeliveryRecord));
+        if (staffRes.ok) {
+          const staffData = await staffRes.json();
+          const staffRecords = Array.isArray(staffData?.data)
+            ? staffData.data
+            : Array.isArray(staffData)
+            ? staffData
+            : [];
+          setStaffPayments(staffRecords);
+        }
       } catch (error) {
-        console.error('Income report load error:', error);
-        setDeliveries([]);
+        console.error('Data load error:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadIncomeData();
+    fetchData();
   }, []);
 
   const truckOptions = useMemo(() => {
     return Array.from(new Set(deliveries.map((item) => item.truckReg))).filter(Boolean);
   }, [deliveries]);
 
-  const timePeriodStats = useMemo(() => {
+  // Current Month String (e.g., "2026-09")
+  const currentMonthKey = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }, []);
 
-    return deliveries.reduce(
-      (acc, item) => {
-        const itemDate = new Date(item.date);
-
-        if (item.date === todayStr) {
-          acc.todayIncome += item.income;
-        }
-
-        if (itemDate >= sevenDaysAgo && itemDate <= now) {
-          acc.weekIncome += item.income;
-        }
-
-        if (itemDate.getFullYear() === currentYear && itemDate.getMonth() === currentMonth) {
-          acc.monthIncome += item.income;
-        }
-
-        return acc;
-      },
-      { todayIncome: 0, weekIncome: 0, monthIncome: 0 }
-    );
-  }, [deliveries]);
-
+  // Filtered Deliveries based on Truck, Date Range, and Search
   const filteredData = useMemo(() => {
     return deliveries.filter((item) => {
       const matchTruck = selectedTruck === 'All' || item.truckReg === selectedTruck;
@@ -153,6 +161,69 @@ export default function IncomeReport() {
     });
   }, [deliveries, selectedTruck, searchTerm, startDate, endDate]);
 
+  // Total Staff Payments in the current month
+  const currentMonthStaffPaymentTotal = useMemo(() => {
+    return staffPayments.reduce((total, payment) => {
+      const paymentMonth = payment.month || (payment.date ? payment.date.slice(0, 7) : '');
+      if (paymentMonth === currentMonthKey) {
+        return total + Number(payment.amount || 0);
+      }
+      return total;
+    }, 0);
+  }, [staffPayments, currentMonthKey]);
+
+  // Rolling timeframe stats with Month Net Profit (after deducting staff payments)
+  const timePeriodStats = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const totals = deliveries.reduce(
+      (acc, item) => {
+        const itemDate = new Date(item.date);
+
+        if (item.date === todayStr) {
+          acc.todayIncome += item.income;
+        }
+
+        if (itemDate >= sevenDaysAgo && itemDate <= now) {
+          acc.weekIncome += item.income;
+        }
+
+        if (itemDate.getFullYear() === currentYear && itemDate.getMonth() === currentMonth) {
+          acc.monthDeliveryIncome += item.income;
+          acc.monthDeliveryExpense += item.expense;
+          acc.monthDeliveryDue += item.due;
+          // Delivery net profit = income - expense - due
+          acc.monthDeliveryNetProfit += item.netIncome;
+        }
+
+        return acc;
+      },
+      {
+        todayIncome: 0,
+        weekIncome: 0,
+        monthDeliveryIncome: 0,
+        monthDeliveryExpense: 0,
+        monthDeliveryDue: 0,
+        monthDeliveryNetProfit: 0,
+      }
+    );
+
+    // Final True Net Profit = Delivery Net Profit - Total Staff Payments
+    const finalMonthlyNetProfit = totals.monthDeliveryNetProfit - currentMonthStaffPaymentTotal;
+
+    return {
+      ...totals,
+      staffPaymentsTotal: currentMonthStaffPaymentTotal,
+      finalMonthlyNetProfit,
+    };
+  }, [deliveries, currentMonthStaffPaymentTotal]);
+
+  // Summary Metrics for the filtered table data
   const metrics = useMemo(() => {
     return filteredData.reduce(
       (acc, item) => {
@@ -160,12 +231,20 @@ export default function IncomeReport() {
         acc.totalReceived += item.received;
         acc.totalDue += item.due;
         acc.totalExpenses += item.expense;
-        acc.netIncome += item.income - item.expense;
-        acc.totalQty += item.quantityTonnes;
+        acc.netIncome += item.netIncome;
+        acc.totalQty += item.goingQuantity + item.comingQuantity;
         acc.deliveryCount += 1;
         return acc;
       },
-      { totalIncome: 0, totalReceived: 0, totalDue: 0, totalExpenses: 0, netIncome: 0, totalQty: 0, deliveryCount: 0 }
+      {
+        totalIncome: 0,
+        totalReceived: 0,
+        totalDue: 0,
+        totalExpenses: 0,
+        netIncome: 0,
+        totalQty: 0,
+        deliveryCount: 0,
+      }
     );
   }, [filteredData]);
 
@@ -176,12 +255,15 @@ export default function IncomeReport() {
       'Date',
       'Truck Reg',
       'Client',
-      'Quantity (Tonnes)',
+      'Going Material',
+      'Going Quantity (MT)',
+      'Coming Material',
+      'Coming Quantity (MT)',
       'Income (INR)',
       'Received (INR)',
       'Due (INR)',
       'Expense (INR)',
-      'Net Income (INR)',
+      'Net Profit (INR)',
       'Delivery Status',
       'Payment Status',
       'Going Route',
@@ -194,7 +276,10 @@ export default function IncomeReport() {
       item.date,
       item.truckReg,
       item.client,
-      item.quantityTonnes,
+      item.goingMaterial,
+      item.goingQuantity,
+      item.comingMaterial,
+      item.comingQuantity,
       item.income,
       item.received,
       item.due,
@@ -244,7 +329,9 @@ export default function IncomeReport() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Income & Revenue Report</h1>
-          <p style={styles.subtitle}>Analyze fleet billing, client balances, transport volume, and net profit margins.</p>
+          <p style={styles.subtitle}>
+            Analyze fleet billing, client balances, transport volume, and monthly net profit after staff payouts.
+          </p>
         </div>
         <button style={styles.exportBtn} onClick={handleExportExcel}>
           <Download size={16} />
@@ -252,38 +339,54 @@ export default function IncomeReport() {
         </button>
       </div>
 
-      {/* 3 Quick Timeframe Cards */}
-      <div style={styles.timeframeGrid}>
-        <div style={styles.timeCard}>
+      {/* Primary KPI Summary Cards */}
+      <div style={styles.kpiGrid}>
+        {/* Total Monthly Income */}
+        <div style={styles.card}>
           <div style={styles.cardHeader}>
-            <span>Today's Total Income</span>
-            <Calendar size={18} color="#2563eb" />
+            <span>This Month's Income</span>
+            <DollarSign size={18} color="#2563eb" />
+          </div>
+          <div style={styles.cardValue}>₹{timePeriodStats.monthDeliveryIncome.toLocaleString()}</div>
+          <p style={styles.cardSub}>Gross delivery billing</p>
+        </div>
+
+        {/* Total Monthly Staff Payments */}
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <span>Month Staff Payouts</span>
+            <Users size={18} color="#ea580c" />
+          </div>
+          <div style={{ ...styles.cardValue, color: '#ea580c' }}>
+            - ₹{timePeriodStats.staffPaymentsTotal.toLocaleString()}
+          </div>
+          <p style={styles.cardSub}>Driver & helper payments</p>
+        </div>
+
+        {/* Final Monthly Net Profit */}
+        <div style={{ ...styles.card, borderLeft: '4px solid #16a34a', backgroundColor: '#f0fdf4' }}>
+          <div style={styles.cardHeader}>
+            <span style={{ fontWeight: '700', color: '#166534' }}>Total Monthly Net Profit</span>
+            <PiggyBank size={20} color="#16a34a" />
+          </div>
+          <div style={{ ...styles.cardValue, color: timePeriodStats.finalMonthlyNetProfit >= 0 ? '#15803d' : '#b91c1c', fontSize: '24px' }}>
+            ₹{timePeriodStats.finalMonthlyNetProfit.toLocaleString()}
+          </div>
+          <p style={{ ...styles.cardSub, color: '#166534' }}>
+            Delivery Net Profit (₹{timePeriodStats.monthDeliveryNetProfit.toLocaleString()}) - Staff Payments
+          </p>
+        </div>
+
+        {/* Today's Income */}
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <span>Today's Income</span>
+            <Calendar size={18} color="#0891b2" />
           </div>
           <div style={styles.cardValue}>₹{timePeriodStats.todayIncome.toLocaleString()}</div>
           <p style={styles.cardSub}>Generated today</p>
         </div>
-
-        <div style={styles.timeCard}>
-          <div style={styles.cardHeader}>
-            <span>This Week's Total Income</span>
-            <CalendarDays size={18} color="#0891b2" />
-          </div>
-          <div style={styles.cardValue}>₹{timePeriodStats.weekIncome.toLocaleString()}</div>
-          <p style={styles.cardSub}>Past 7 rolling days</p>
-        </div>
-
-        <div style={styles.timeCard}>
-          <div style={styles.cardHeader}>
-            <span>This Month's Total Income</span>
-            <CalendarRange size={18} color="#7c3aed" />
-          </div>
-          <div style={styles.cardValue}>₹{timePeriodStats.monthIncome.toLocaleString()}</div>
-          <p style={styles.cardSub}>Current calendar month</p>
-        </div>
       </div>
-
-      {/* Primary KPI Cards */}
-      
 
       {/* Filter Toolbar */}
       <div style={styles.filterCard}>
@@ -337,11 +440,16 @@ export default function IncomeReport() {
               <th style={styles.th}>Delivery / Inv</th>
               <th style={styles.th}>Date</th>
               <th style={styles.th}>Truck</th>
-              <th style={styles.th}>Client</th>
-              <th style={styles.th}>Quantity</th>
+              <th style={styles.th}>Going Route</th>
+              <th style={styles.th}>Going Material</th>
+              <th style={styles.th}>Going Qty</th>
+              <th style={styles.th}>Coming Route</th>
+              <th style={styles.th}>Coming Material</th>
+              <th style={styles.th}>Coming Qty</th>
               <th style={styles.th}>Gross Income</th>
               <th style={styles.th}>Received</th>
               <th style={styles.th}>Due</th>
+              <th style={styles.th}>Net Profit</th>
               <th style={styles.th}>Status</th>
               <th style={styles.th}>Actions</th>
             </tr>
@@ -364,11 +472,29 @@ export default function IncomeReport() {
                         → {item.goingDestination || '-'}
                       </div>
                     </td>
-                    <td style={styles.td}>{item.quantityTonnes} MT</td>
+                    <td style={styles.td}>{item.goingMaterial}</td>
+                    <td style={styles.td}>{item.goingQuantity} MT</td>
+                    <td style={styles.td}>
+                      {item.comingSource ? (
+                        <>
+                          <strong>{item.comingSource}</strong>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                            → {item.comingDestination || '-'}
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>-</span>
+                      )}
+                    </td>
+                    <td style={styles.td}>{item.comingMaterial}</td>
+                    <td style={styles.td}>{item.comingQuantity > 0 ? `${item.comingQuantity} MT` : '-'}</td>
                     <td style={styles.td}><strong>₹{item.income.toLocaleString()}</strong></td>
                     <td style={{ ...styles.td, color: '#15803d' }}>₹{item.received.toLocaleString()}</td>
                     <td style={{ ...styles.td, color: item.due > 0 ? '#b91c1c' : '#64748b' }}>
                       ₹{item.due.toLocaleString()}
+                    </td>
+                    <td style={{ ...styles.td, color: item.netIncome >= 0 ? '#16a34a' : '#b91c1c', fontWeight: '600' }}>
+                      ₹{item.netIncome.toLocaleString()}
                     </td>
                     <td style={styles.td}>
                       <span style={{ ...styles.badge, backgroundColor: statusStyle.bg, color: statusStyle.text }}>
@@ -378,7 +504,6 @@ export default function IncomeReport() {
                         {item.paymentStatus}
                       </div>
                     </td>
-                    {/*  */}
                     <td style={styles.td}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
@@ -402,8 +527,8 @@ export default function IncomeReport() {
               })
             ) : (
               <tr>
-                <td colSpan="10" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '32px' }}>
-                  No revenue or delivery records found for the selected filters.
+                <td colSpan="15" style={{ ...styles.td, textAlign: 'center', color: '#64748b', padding: '32px' }}>
+                  {loading ? 'Loading income and staff payment records...' : 'No revenue records found for the selected filters.'}
                 </td>
               </tr>
             )}
@@ -427,13 +552,14 @@ export default function IncomeReport() {
               <div style={styles.detailRow}><span>Assigned Truck:</span><strong>{activeModalData.truckReg}</strong></div>
               <div style={styles.detailRow}><span>Driver:</span><strong>{activeModalData.driverName || '-'}</strong></div>
               <div style={styles.detailRow}><span>Going Route:</span><strong>{activeModalData.goingSource || '-'} → {activeModalData.goingDestination || '-'}</strong></div>
+              <div style={styles.detailRow}><span>Going Cargo:</span><strong>{activeModalData.goingMaterial} ({activeModalData.goingQuantity} MT)</strong></div>
               <div style={styles.detailRow}><span>Coming Route:</span><strong>{activeModalData.comingDate || '-'}: {activeModalData.comingSource || '-'} → {activeModalData.comingDestination || '-'}</strong></div>
-              <div style={styles.detailRow}><span>Load Weight:</span><strong>{activeModalData.quantityTonnes} Tonnes</strong></div>
+              <div style={styles.detailRow}><span>Coming Cargo:</span><strong>{activeModalData.comingMaterial} ({activeModalData.comingQuantity} MT)</strong></div>
               <div style={styles.detailRow}><span>Billed Income:</span><strong>₹{activeModalData.income.toLocaleString()}</strong></div>
               <div style={styles.detailRow}><span>Trip Expenses:</span><strong style={{ color: '#ea580c' }}>₹{activeModalData.expense.toLocaleString()}</strong></div>
-              <div style={styles.detailRow}><span>Net Earnings:</span><strong style={{ color: '#16a34a' }}>₹{activeModalData.netIncome.toLocaleString()}</strong></div>
+              <div style={styles.detailRow}><span>Due Amount:</span><strong style={{ color: '#b91c1c' }}>₹{activeModalData.due.toLocaleString()}</strong></div>
+              <div style={styles.detailRow}><span>Delivery Net Profit:</span><strong style={{ color: '#16a34a' }}>₹{activeModalData.netIncome.toLocaleString()}</strong></div>
               <div style={styles.detailRow}><span>Amount Paid:</span><strong style={{ color: '#15803d' }}>₹{activeModalData.received.toLocaleString()}</strong></div>
-              <div style={styles.detailRow}><span>Outstanding Due:</span><strong style={{ color: '#b91c1c' }}>₹{activeModalData.due.toLocaleString()}</strong></div>
               <div style={styles.detailRow}><span>Delivery Status:</span><strong>{activeModalData.operationalStatus}</strong></div>
             </div>
           </div>
@@ -479,21 +605,9 @@ const styles = {
     fontSize: '13px',
     cursor: 'pointer',
   },
-  timeframeGrid: {
+  kpiGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '16px',
-  },
-  timeCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #cbd5e1',
-    borderLeft: '4px solid #2563eb',
-    borderRadius: '8px',
-    padding: '16px',
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '16px',
   },
   card: {
@@ -596,6 +710,7 @@ const styles = {
     borderBottom: '1px solid #e2e8f0',
     color: '#64748b',
     fontWeight: '600',
+    whiteSpace: 'nowrap',
   },
   tr: {
     borderBottom: '1px solid #f1f5f9',
@@ -603,6 +718,7 @@ const styles = {
   td: {
     padding: '12px',
     color: '#334155',
+    whiteSpace: 'nowrap',
   },
   badge: {
     padding: '3px 8px',

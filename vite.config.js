@@ -9,6 +9,7 @@ const apiRoutes = new Set([
   'fuel',
   'income',
   'maintenance',
+  'staff-payments',
   'trucks',
 ])
 

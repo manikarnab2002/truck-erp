@@ -10,6 +10,7 @@ import {
   FileText,
   Save,
   RotateCcw,
+  Pencil,
   Trash2,
   TrendingUp,
 } from "lucide-react";
@@ -18,22 +19,23 @@ const emptyForm = {
   // Truck Info
   truckNumber: "",
   driverName: "",
-  
   status: "In Transit",
 
   // Delivery Route - Going
   goingDate: new Date().toISOString().split("T")[0],
   goingSource: "",
   goingDestination: "",
+  goingQuantity: "",
+  going_material: "",
 
   // Delivery Route - Coming (Return)
   comingDate: "",
   comingSource: "",
   comingDestination: "",
+  comingQuantity: "",
+  coming_material: "",
 
-  // Material & Quantity
-  material: "",
-  quantity: "",
+  // Common Unit
   quantityUnit: "Ton",
 
   // Financial Details
@@ -44,7 +46,6 @@ const emptyForm = {
   tollCost: "",
   maintenanceCost: "",
   maintenanceType: "",
-  driverSalary: "",
   netProfit: "0",
 
   // Additional Notes
@@ -107,7 +108,7 @@ export default function DailyDelivery() {
     }
   };
 
-  // Handle input changes & auto-calculate Due Amount & Net Profit
+  // Handle input changes and calculate due amount and net profit correctly
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -120,14 +121,15 @@ export default function DailyDelivery() {
       const fuelCost = Number(name === "fuelCost" ? value : prev.fuelCost) || 0;
       const tollCost = Number(name === "tollCost" ? value : prev.tollCost) || 0;
       const maintenanceCost = Number(name === "maintenanceCost" ? value : prev.maintenanceCost) || 0;
-      const driverSalary = Number(name === "driverSalary" ? value : prev.driverSalary) || 0;
 
       // Due Amount = Delivery Cost - Advance Paid
       updated.dueAmount = Math.max(deliveryCost - advancePaid, 0).toString();
 
-      // Net Profit = Delivery Cost - Total Expenses (Fuel + Toll + Maintenance + Driver Salary)
-      const totalExpenses = fuelCost + tollCost + maintenanceCost + driverSalary;
-      updated.netProfit = (deliveryCost - totalExpenses).toString();
+      // Total Expenses = Fuel + Toll + Maintenance
+      const totalExpenses = fuelCost + tollCost + maintenanceCost;
+
+      // Net Profit = Total Revenue (Advance Paid) - Total Expenses
+      updated.netProfit = (advancePaid - totalExpenses).toString();
 
       return updated;
     });
@@ -150,7 +152,7 @@ export default function DailyDelivery() {
         return;
       }
 
-      setDeliveries((prev) => [result.data, ...prev]);
+      setDeliveries((prev) => [result.data || result, ...prev]);
       setSaved(true);
       setFormData(emptyForm);
 
@@ -195,11 +197,13 @@ export default function DailyDelivery() {
       "Driver",
       "Going Source",
       "Going Destination",
+      "Going Material",
+      "Going Quantity",
       "Coming Date",
       "Coming Source",
       "Coming Destination",
-      "Material",
-      "Quantity",
+      "Coming Material",
+      "Coming Quantity",
       "Unit",
       "Delivery Cost",
       "Advance",
@@ -207,38 +211,94 @@ export default function DailyDelivery() {
       "Fuel Cost",
       "Toll Cost",
       "Maintenance Cost",
-      "Driver Salary",
-      "Total Expense",
       "Net Profit",
       "Status",
       "Notes",
     ];
     const rows = deliveries.map((delivery) => [
       delivery.goingDate || delivery.deliveryDate || "",
-      delivery.truckNumber,
-      delivery.driverName,
-      delivery.goingSource || delivery.source,
-      delivery.goingDestination || delivery.destination,
-      delivery.comingDate,
-      delivery.comingSource,
-      delivery.comingDestination,
-      delivery.material,
-      delivery.quantity,
-      delivery.quantityUnit,
-      delivery.deliveryCost,
-      delivery.advancePaid ?? delivery.amountPaid,
-      delivery.dueAmount,
-      delivery.fuelCost,
-      delivery.tollCost,
-      delivery.maintenanceCost,
-      delivery.driverSalary,
-      delivery.totalExpense,
-      delivery.netProfit ?? delivery.netIncome,
-      delivery.status,
-      delivery.notes,
+      delivery.truckNumber || "",
+      delivery.driverName || "",
+      delivery.goingSource || delivery.source || "",
+      delivery.goingDestination || delivery.destination || "",
+      delivery.going_material || delivery.material || "",
+      delivery.goingQuantity ?? delivery.quantity ?? "",
+      delivery.comingDate || "",
+      delivery.comingSource || "",
+      delivery.comingDestination || "",
+      delivery.coming_material || "",
+      delivery.comingQuantity || "",
+      delivery.quantityUnit || "Ton",
+      delivery.deliveryCost || 0,
+      delivery.advancePaid ?? delivery.amountPaid ?? 0,
+      delivery.dueAmount || 0,
+      delivery.fuelCost || 0,
+      delivery.tollCost || 0,
+      delivery.maintenanceCost || 0,
+      delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0,
+      delivery.status || "",
+      delivery.notes || "",
     ]);
     exportCsv(`Daily_Deliveries_${new Date().toISOString().split("T")[0]}.csv`, headers, rows);
   };
+
+  // Handles due collection/updates when customers pay next day
+  const handleEditDueAmount = async (delivery) => {
+  const currentDueAmount = Number(delivery.dueAmount || 0);
+  const input = window.prompt(
+    `Current Due: ₹${currentDueAmount.toLocaleString("en-IN")}\nEnter remaining due amount (enter 0 if fully cleared):`,
+    currentDueAmount.toString()
+  );
+
+  if (input === null) return;
+  const newDue = Number(input.trim());
+
+  if (isNaN(newDue) || newDue < 0) {
+    alert("Please enter a valid positive number or 0.");
+    return;
+  }
+
+  // Calculate actual revenue collected & expenses
+  const deliveryCost = Number(delivery.deliveryCost || 0);
+  const fuelCost = Number(delivery.fuelCost || 0);
+  const tollCost = Number(delivery.tollCost || 0);
+  const maintenanceCost = Number(delivery.maintenanceCost || 0);
+  
+  const totalExpenses = fuelCost + tollCost + maintenanceCost;
+  // Total Revenue Collected = Total Cost - Remaining Due
+  const totalReceived = deliveryCost - newDue;
+  const updatedProfit = totalReceived - totalExpenses;
+
+  try {
+    const response = await fetch(`/api/deliveries?id=${encodeURIComponent(delivery._id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        dueAmount: newDue,
+        netProfit: updatedProfit,
+      }),
+    });
+    const result = await response.json();
+
+    if (!response.ok) throw new Error(result.message || "Unable to update due amount.");
+
+    setDeliveries((prev) =>
+      prev.map((item) =>
+        item._id === delivery._id
+          ? {
+              ...item,
+              dueAmount: newDue,
+              net_profit: result.net_profit ?? result.netProfit ?? updatedProfit,
+              netProfit: result.net_profit ?? result.netProfit ?? updatedProfit,
+            }
+          : item
+      )
+    );
+  } catch (error) {
+    console.error("Update due amount error:", error);
+    alert(error.message || "Unable to update due amount.");
+  }
+};
 
   return (
     <div style={styles.container}>
@@ -247,7 +307,7 @@ export default function DailyDelivery() {
         <div>
           <h1 style={styles.title}>Daily Truck Delivery</h1>
           <p style={styles.subtitle}>
-            Record daily truck trips, return routes, expenses, and driver salaries.
+            Record daily truck trips, return routes, and expenses.
           </p>
         </div>
         <div style={styles.dateBox}>
@@ -384,6 +444,45 @@ export default function DailyDelivery() {
             </FormGroup>
           </div>
 
+          <div style={{ ...styles.formGrid, marginTop: "20px" }}>
+            <FormGroup label="Going Material">
+              <input
+                type="text"
+                name="going_material"
+                value={formData.going_material}
+                onChange={handleChange}
+                placeholder="e.g. Cement, Plywood, Iron Rods"
+                style={styles.input}
+              />
+            </FormGroup>
+
+            <FormGroup label="Going Quantity">
+              <div style={styles.quantityGroup}>
+                <input
+                  type="number"
+                  name="goingQuantity"
+                  value={formData.goingQuantity}
+                  onChange={handleChange}
+                  placeholder="0"
+                  min="0"
+                  style={styles.quantityInput}
+                />
+                <select
+                  name="quantityUnit"
+                  value={formData.quantityUnit}
+                  onChange={handleChange}
+                  style={styles.unitSelect}
+                >
+                  <option value="Ton">Ton</option>
+                  <option value="Kg">Kg</option>
+                  <option value="Piece">Piece</option>
+                  <option value="Load">Load</option>
+                  <option value="CFT">CFT</option>
+                </select>
+              </div>
+            </FormGroup>
+          </div>
+
           {/* COMING SECTION */}
           <div style={{ ...styles.subSectionTitle, marginTop: "20px" }}>Coming Trip (Return)</div>
           <div style={styles.formGridThree}>
@@ -420,25 +519,24 @@ export default function DailyDelivery() {
             </FormGroup>
           </div>
 
-          {/* MATERIALS & QUANTITY */}
           <div style={{ ...styles.formGrid, marginTop: "20px" }}>
-            <FormGroup label="Materials">
+            <FormGroup label="Coming Material">
               <input
                 type="text"
-                name="material"
-                value={formData.material}
+                name="coming_material"
+                value={formData.coming_material}
                 onChange={handleChange}
                 placeholder="e.g. Cement, Plywood, Iron Rods"
                 style={styles.input}
               />
             </FormGroup>
 
-            <FormGroup label="Quantity">
+            <FormGroup label="Coming Quantity">
               <div style={styles.quantityGroup}>
                 <input
                   type="number"
-                  name="quantity"
-                  value={formData.quantity}
+                  name="comingQuantity"
+                  value={formData.comingQuantity}
                   onChange={handleChange}
                   placeholder="0"
                   min="0"
@@ -565,21 +663,6 @@ export default function DailyDelivery() {
                   <option value="General Service">General Service</option>
                   <option value="Other">Other</option>
                 </select>
-              </div>
-            </FormGroup>
-
-            <FormGroup label="Driver Salary">
-              <div style={styles.inputWithIcon}>
-                <IndianRupee size={15} color="#64748b" />
-                <input
-                  type="number"
-                  name="driverSalary"
-                  value={formData.driverSalary}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  min="0"
-                  style={styles.iconInput}
-                />
               </div>
             </FormGroup>
 
@@ -718,13 +801,11 @@ export default function DailyDelivery() {
                     </td>
 
                     <td style={styles.td}>
-                      {delivery.material ? <strong>{delivery.material}</strong> : null}
-                      {delivery.quantity ? (
-                        <div>
-                          {delivery.quantity} {delivery.quantityUnit}
+                      <div>Going: {delivery.going_material ? <strong>{delivery.going_material} </strong> : ""}({delivery.goingQuantity ?? delivery.quantity ?? "-"} {delivery.quantityUnit || "Ton"})</div>
+                      {(delivery.coming_material || delivery.comingQuantity) && (
+                        <div style={{ color: "#64748b", fontSize: "11px" }}>
+                          Coming: {delivery.coming_material ? <strong>{delivery.coming_material} </strong> : ""}({delivery.comingQuantity || "-"} {delivery.quantityUnit || "Ton"})
                         </div>
-                      ) : (
-                        "-"
                       )}
                     </td>
 
@@ -750,12 +831,12 @@ export default function DailyDelivery() {
                       <strong
                         style={{
                           color:
-                            Number(delivery.netProfit ?? delivery.netIncome ?? 0) >= 0
+                            Number(delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0) >= 0
                               ? "#15803d"
                               : "#dc2626",
                         }}
                       >
-                        ₹ {Number(delivery.netProfit ?? delivery.netIncome ?? 0).toLocaleString("en-IN")}
+                        ₹ {Number(delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0).toLocaleString("en-IN")}
                       </strong>
                     </td>
 
@@ -775,6 +856,14 @@ export default function DailyDelivery() {
                     </td>
 
                     <td style={styles.td}>
+                      <button
+                        type="button"
+                        onClick={() => handleEditDueAmount(delivery)}
+                        style={styles.editBtn}
+                        title="Update Due Balance"
+                      >
+                        <Pencil size={15} />
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(delivery._id)}
@@ -1149,6 +1238,19 @@ const styles = {
     backgroundColor: "#fef2f2",
     color: "#dc2626",
     borderRadius: "5px",
+    cursor: "pointer",
+  },
+  editBtn: {
+    width: "30px",
+    height: "30px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: "6px",
+    border: "1px solid #bfdbfe",
+    backgroundColor: "#eff6ff",
+    color: "#2563eb",
+    borderRadius: "6px",
     cursor: "pointer",
   },
   emptyState: {

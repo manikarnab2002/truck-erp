@@ -27,12 +27,11 @@ export default async function handler(req, res) {
       const fuelCost = Number(req.body.fuelCost || 0);
       const tollCost = Number(req.body.tollCost || 0);
       const maintenanceCost = Number(req.body.maintenanceCost || 0);
-      const driverSalary = Number(req.body.driverSalary || 0);
 
       // Calculations
       const dueAmount = Math.max(deliveryCost - advancePaid, 0);
-      const totalExpense = fuelCost + tollCost + maintenanceCost + driverSalary;
-      const netProfit = deliveryCost - totalExpense;
+      const totalExpense = fuelCost + tollCost + maintenanceCost;
+      const netProfit = deliveryCost - totalExpense - dueAmount;
 
       const delivery = {
         // Truck Info
@@ -56,8 +55,10 @@ export default async function handler(req, res) {
         comingDestination: req.body.comingDestination || "",
 
         // Materials & Quantity
-        material: req.body.material || "",
-        quantity: Number(req.body.quantity || 0),
+        going_material: req.body.going_material || "",
+        coming_material: req.body.coming_material || "",
+        goingQuantity: Number(req.body.goingQuantity ?? req.body.quantity ?? 0),
+        comingQuantity: Number(req.body.comingQuantity || 0),
         quantityUnit: req.body.quantityUnit || "Ton",
 
         // Financials
@@ -69,8 +70,8 @@ export default async function handler(req, res) {
         tollCost,
         maintenanceCost,
         maintenanceType: req.body.maintenanceType || "",
-        driverSalary,
         totalExpense,
+        net_profit: netProfit,
         netProfit,
         netIncome: netProfit,
 
@@ -87,6 +88,60 @@ export default async function handler(req, res) {
         id: result.insertedId,
         data: { _id: result.insertedId, ...delivery },
         message: "Delivery saved successfully",
+      });
+    }
+
+    // UPDATE DUE AMOUNT
+    if (req.method === "PATCH") {
+      const id = req.query.id;
+      const dueAmount = Number(req.body?.dueAmount);
+
+      if (!id || !ObjectId.isValid(id)) {
+        return res.status(400).json({ success: false, message: "Valid delivery ID is required" });
+      }
+      if (!Number.isFinite(dueAmount) || dueAmount < 0) {
+        return res.status(400).json({ success: false, message: "A valid due amount is required" });
+      }
+
+      const delivery = await deliveries.findOne({ _id: new ObjectId(id) });
+      if (!delivery) {
+        return res.status(404).json({ success: false, message: "Delivery not found" });
+      }
+
+      const deliveryCost = Number(delivery.deliveryCost || 0);
+
+      // Fallback in case totalExpense was not stored previously
+      const totalExpense =
+        delivery.totalExpense !== undefined
+          ? Number(delivery.totalExpense)
+          : Number(delivery.fuelCost || 0) +
+            Number(delivery.tollCost || 0) +
+            Number(delivery.maintenanceCost || 0);
+
+      // Net profit = (Total revenue collected) - total expense
+      const netProfit = deliveryCost - totalExpense - dueAmount;
+      const updatedReceived = Math.max(deliveryCost - dueAmount, 0);
+
+      const updateFields = {
+        dueAmount,
+        totalExpense,
+        net_profit: netProfit,
+        netProfit,
+        netIncome: netProfit,
+        amountPaid: updatedReceived,
+      };
+
+      await deliveries.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateFields }
+      );
+
+      return res.status(200).json({
+        success: true,
+        dueAmount,
+        net_profit: netProfit,
+        netProfit,
+        amountPaid: updatedReceived,
       });
     }
 

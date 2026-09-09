@@ -12,6 +12,7 @@ export default function Sidebar() {
     // { path: '/Maintenance', label: '🔧 Repairs & Service' },
     { path: '/Drivers', label: '👨‍✈️ Drivers' },
     { path: '/Fuel', label: '⛽ Fuel Logs' },
+    {path: '/stuff-payment', label: '💰 Stuff Payment'},
     { path: '/income-report', label: '📈 Income Report' },
   ];
 

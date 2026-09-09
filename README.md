@@ -1,11 +1,5 @@
 # Truck ERP
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-## React Compiler
-
 Truck ERP is a React and Vite operations dashboard for managing a transport fleet. It provides screens for fleet records, drivers, fuel usage, deliveries, maintenance work orders, and income reporting, with MongoDB-backed API handlers for the operational records.
 
 ## Features
@@ -15,7 +9,10 @@ Truck ERP is a React and Vite operations dashboard for managing a transport flee
 - Fleet management: list, search, add, and delete trucks.
 - Driver management: list, search/filter, add, and delete drivers.
 - Fuel logs: record fuel purchases, search logs, and delete entries.
-- Daily deliveries: record routes, cargo, payments, expenses, and calculated net income.
+- Staff payments: record driver and helper payments, allowances, payment methods, notes, totals, and CSV exports.
+- Daily deliveries: record going and coming routes, separate cargo quantities, payments, expenses, and calculated net profit.
+- Delivery net profit is stored in `net_profit` using `Delivery Cost - Total Expenses - Due Amount`.
+- Due amounts can be edited independently; the stored net profit is recalculated when the due amount changes.
 - Maintenance: create and filter work orders using the current in-memory sample data.
 - Income report: filter sample delivery income by date and truck, view totals/charts, and export CSV data.
 - Responsive dashboard layout with sidebar navigation, modals, tables, icons, and Recharts visualizations.
@@ -50,6 +47,7 @@ truck-erp/
 │   ├── fuel.js
 │   ├── income.js
 │   ├── maintenance.js
+│   ├── staff-payments.js
 │   └── trucks.js
 ├── backend/
 │   ├── .env                # Local backend secrets; ignored by Git
@@ -160,6 +158,7 @@ All routes except `/login` require the `truckErpSession` value in `sessionStorag
 | `/maintenance`    | Maintenance and repairs          |
 | `/drivers`        | Driver management                |
 | `/fuel`           | Fuel logs and consumption        |
+| `/stuff-payment`  | Driver and helper payments       |
 | `/income-report`  | Income report                    |
 | `/logout`         | Logout confirmation modal        |
 
@@ -167,19 +166,22 @@ All routes except `/login` require the `truckErpSession` value in `sessionStorag
 
 The frontend calls these endpoints with relative `/api` URLs. The Vite handlers support the methods below.
 
-| Endpoint                                       | Methods       | Purpose                                        |
-| ---------------------------------------------- | ------------- | ---------------------------------------------- |
-| `/api/drivers`                                 | `GET`, `POST` | List and create drivers                        |
-| `/api/drivers?id=<id>`                         | `DELETE`      | Delete a driver by generated driver ID         |
-| `/api/trucks`                                  | `GET`, `POST` | List and create trucks                         |
-| `/api/trucks?id=<id>`                          | `DELETE`      | Delete a truck by MongoDB ObjectId             |
-| `/api/fuel`                                    | `GET`, `POST` | List and create fuel logs                      |
-| `/api/fuel?id=<id>`                            | `DELETE`      | Delete a fuel log by generated log ID          |
-| `/api/deliveries`                              | `GET`, `POST` | List and create delivery records               |
-| `/api/deliveries?id=<id>`                      | `DELETE`      | Delete a delivery by MongoDB ObjectId          |
-| `/api/maintenance`                             | `GET`, `POST` | List and create maintenance work orders        |
-| `/api/maintenance?id=<id>`                     | `DELETE`      | Delete a work order by generated work-order ID |
-| `/api/income?startDate=&endDate=&truckNumber=` | `GET`         | Filter and aggregate delivery income           |
+| Endpoint                                       | Methods       | Purpose                                         |
+| ---------------------------------------------- | ------------- | ----------------------------------------------- |
+| `/api/drivers`                                 | `GET`, `POST` | List and create drivers                         |
+| `/api/drivers?id=<id>`                         | `DELETE`      | Delete a driver by generated driver ID          |
+| `/api/trucks`                                  | `GET`, `POST` | List and create trucks                          |
+| `/api/trucks?id=<id>`                          | `DELETE`      | Delete a truck by MongoDB ObjectId              |
+| `/api/fuel`                                    | `GET`, `POST` | List and create fuel logs                       |
+| `/api/fuel?id=<id>`                            | `DELETE`      | Delete a fuel log by generated log ID           |
+| `/api/staff-payments`                          | `GET`, `POST` | List and create staff payment records           |
+| `/api/staff-payments?id=<id>`                  | `DELETE`      | Delete a staff payment by MongoDB or payment ID |
+| `/api/deliveries`                              | `GET`, `POST` | List and create delivery records                |
+| `/api/deliveries?id=<id>`                      | `PATCH`       | Update due amount and recalculate `net_profit`  |
+| `/api/deliveries?id=<id>`                      | `DELETE`      | Delete a delivery by MongoDB ObjectId           |
+| `/api/maintenance`                             | `GET`, `POST` | List and create maintenance work orders         |
+| `/api/maintenance?id=<id>`                     | `DELETE`      | Delete a work order by generated work-order ID  |
+| `/api/income?startDate=&endDate=&truckNumber=` | `GET`         | Filter and aggregate delivery income            |
 
 Successful create operations return a JSON object containing `success`, `message`, and usually `data`. Validation failures generally return HTTP `400`; duplicate driver licenses or truck registration numbers return HTTP `409`; missing records return HTTP `404`.
 
@@ -190,7 +192,15 @@ The application uses the `truck_erp` database and these collections:
 - `drivers`: driver identity, license, assignment, status, and timestamps.
 - `trucks`: registration, model/type, assigned driver, mileage, service date, status, and timestamps.
 - `fuelLogs`: truck, driver, liters, cost, odometer, mileage, station, date, and timestamps.
-- `deliveries`: route, vehicle/driver, cargo, payment, expenses, calculated due amount, total expense, and net income.
+- `staff_payments`: driver/helper payments, payment type, payment method, amount, notes, month, year, and timestamps.
+- `deliveries`: route, vehicle/driver, cargo, payment, expenses, due amount, total expense, and `net_profit`.
+
+For a delivery, net profit is calculated as:
+
+```text
+net_profit = deliveryCost - totalExpense - dueAmount
+```
+
 - `workOrders`: truck, service type, mechanic, priority, cost, start date, status, and timestamps.
 
 ## Available Scripts
@@ -225,7 +235,7 @@ npm run build
 - The CAPTCHA and login-attempt limit are browser-side controls and are not a security boundary.
 - Maintenance and income-report screens currently initialize from sample data in the React components. The corresponding API handlers exist, but these screens are not yet connected to them.
 - The repository contains both Vite API handlers and a standalone Express implementation. Keep their request and identifier behavior aligned when changing the API.
-- The standalone Express server currently implements health, driver, truck, fuel, and delivery routes. The Vite handler path also exposes maintenance and income handlers.
+- The standalone Express server currently implements health, driver, truck, fuel, delivery, and staff payment routes. The Vite handler path also exposes maintenance, income, and staff payment handlers.
 - No automated test suite is currently defined in `package.json`.
 - Add authentication/authorization, request validation, rate limiting, structured logging, database indexes, and deployment-specific environment configuration before exposing the application publicly.
 
