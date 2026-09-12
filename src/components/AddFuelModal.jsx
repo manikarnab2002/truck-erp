@@ -36,16 +36,13 @@ export default function AddFuelModal({
         date: initialData.date || '',
         station: initialData.station || '',
       });
-      return;
+    } else {
+      setFormData({
+        ...initialFormState,
+        truckNo: truckOptions.length > 0 ? truckOptions[0] : '',
+      });
     }
-
-    if (truckOptions.length && !formData.truckNo) {
-      setFormData((prev) => ({ ...prev, truckNo: truckOptions[0] }));
-      return;
-    }
-
-    setFormData(initialFormState);
-  }, [isOpen, mode, initialData, truckOptions, formData.truckNo]);
+  }, [isOpen, mode, initialData, truckOptions]);
 
   if (!isOpen) return null;
 
@@ -72,7 +69,6 @@ export default function AddFuelModal({
       alert('Unable to save fuel log.');
     }
   };
-  
 
   const handleClose = () => {
     setFormData(initialFormState);
@@ -123,7 +119,6 @@ export default function AddFuelModal({
                 style={styles.input}
               />
             </div>
-
 
             <div style={styles.field}>
               <label style={styles.label}>Fuel Quantity (Liters) *</label>
