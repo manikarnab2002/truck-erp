@@ -153,6 +153,7 @@ export default function Fuel() {
       />
 
 
+
       <div style={styles.filterCard}>
         <div style={styles.searchBox}>
           <Search size={16} color="#64748b" />

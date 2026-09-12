@@ -123,6 +123,7 @@ export default function AddFuelModal({
               />
             </div>
 
+
             <div style={styles.field}>
               <label style={styles.label}>Fuel Quantity (Liters) *</label>
               <div style={styles.iconInputWrapper}>
