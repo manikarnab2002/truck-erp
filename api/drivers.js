@@ -198,7 +198,10 @@ export default async function handler(req, res) {
         });
       }
 
-      const currentDriver = await drivers.findOne({ id });
+      const driverFilter = ObjectId.isValid(id)
+        ? { $or: [{ id }, { _id: new ObjectId(id) }] }
+        : { id };
+      const currentDriver = await drivers.findOne(driverFilter);
 
       if (!currentDriver) {
         return res.status(404).json({
@@ -207,8 +210,9 @@ export default async function handler(req, res) {
         });
       }
 
+      const { _id, ...currentDriverFields } = currentDriver;
       const updatedDriver = {
-        ...currentDriver,
+        ...currentDriverFields,
         name: cleanName,
         phone: cleanPhone,
         assignedTruck: assignedTruck || currentDriver.assignedTruck || "Unassigned",
@@ -216,7 +220,7 @@ export default async function handler(req, res) {
         updatedAt: new Date(),
       };
 
-      await drivers.updateOne({ id }, { $set: updatedDriver });
+      await drivers.updateOne(driverFilter, { $set: updatedDriver });
 
       return res.status(200).json({
         success: true,
@@ -248,12 +252,11 @@ export default async function handler(req, res) {
       Find by custom driver ID
       */
 
-      const result =
-        await drivers.deleteOne({
+      const filter = ObjectId.isValid(id)
+        ? { $or: [{ id }, { _id: new ObjectId(id) }] }
+        : { id };
 
-          id: id
-
-        });
+      const result = await drivers.deleteOne(filter);
 
 
       if (

@@ -60,7 +60,9 @@ export default function Fuel() {
 
   const handleAddFuelLog = async (newLog) => {
     const method = editingLog ? 'PUT' : 'POST';
-    const url = editingLog ? `/api/fuel/${encodeURIComponent(editingLog.id)}` : '/api/fuel';
+    const url = editingLog
+      ? `/api/fuel?id=${encodeURIComponent(editingLog.id)}`
+      : '/api/fuel';
 
     const response = await fetch(url, {
       method,

@@ -1,4 +1,5 @@
 import clientPromise from "../lib/mongodb.js";
+import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
   try {
@@ -75,13 +76,17 @@ export default async function handler(req, res) {
         });
       }
 
-      const currentLog = await fuelLogs.findOne({ id });
+      const logFilter = ObjectId.isValid(id)
+        ? { $or: [{ id }, { _id: new ObjectId(id) }] }
+        : { id };
+      const currentLog = await fuelLogs.findOne(logFilter);
       if (!currentLog) {
         return res.status(404).json({ success: false, message: "Fuel log not found" });
       }
 
+      const { _id, ...currentLogFields } = currentLog;
       const updatedFuelLog = {
-        ...currentLog,
+        ...currentLogFields,
         truckNo: truckNo.trim(),
         driver: driver?.trim() || currentLog.driver || "Unassigned",
         liters: `${litersValue} L`,
@@ -93,7 +98,7 @@ export default async function handler(req, res) {
         updatedAt: new Date(),
       };
 
-      await fuelLogs.updateOne({ id }, { $set: updatedFuelLog });
+      await fuelLogs.updateOne(logFilter, { $set: updatedFuelLog });
 
       return res.status(200).json({
         success: true,
@@ -108,7 +113,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, message: "Fuel log ID is required" });
       }
 
-      const result = await fuelLogs.deleteOne({ id });
+      const filter = ObjectId.isValid(id)
+        ? { $or: [{ id }, { _id: new ObjectId(id) }] }
+        : { id };
+      const result = await fuelLogs.deleteOne(filter);
       if (result.deletedCount === 0) {
         return res.status(404).json({ success: false, message: "Fuel log not found" });
       }

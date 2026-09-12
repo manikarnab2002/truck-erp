@@ -135,7 +135,9 @@ export default function Drivers() {
       try {
 
         const method = editingDriver ? "PUT" : "POST";
-        const url = editingDriver ? `/api/drivers/${encodeURIComponent(editingDriver.id)}` : "/api/drivers";
+        const url = editingDriver
+          ? `/api/drivers?id=${encodeURIComponent(editingDriver.id)}`
+          : "/api/drivers";
 
         const response = await fetch(
           url,
@@ -197,9 +199,7 @@ export default function Drivers() {
           error
         );
 
-        alert(
-          "Unable to connect to the server."
-        );
+        alert(error.message || "Unable to connect to the server.");
 
         return false;
 

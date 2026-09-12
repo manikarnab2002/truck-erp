@@ -89,7 +89,6 @@ export default function Fleet() {
 
       if (!response.ok) {
         throw new Error(result.message || (editingTruck ? 'Failed to update truck.' : 'Failed to add truck.'));
-        return false;
       }
 
       await loadTrucks();

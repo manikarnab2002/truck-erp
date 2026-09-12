@@ -90,6 +90,8 @@ The Vite development server loads environment variables from the project root, w
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
 ```
 
+For Vercel, add `MONGODB_URI` in the project Settings under Environment Variables for Production, Preview, and Development as needed, then redeploy. The Vercel API functions under `api/` use this variable directly; do not expose it as a `VITE_*` variable.
+
 Never commit either `.env` file or real credentials. The repository ignores environment files by default.
 
 ## Installation
