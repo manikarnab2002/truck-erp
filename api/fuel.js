@@ -50,8 +50,58 @@ export default async function handler(req, res) {
       });
     }
 
+    if (req.method === "PUT") {
+      const id = req.params?.id || req.query?.id;
+      const { truckNo, driver, liters, totalCost, odometer, mileage, date, station } = req.body || {};
+      const litersValue = Number(liters);
+      const totalCostValue = Number(totalCost);
+
+      if (!id) {
+        return res.status(400).json({ success: false, message: "Fuel log ID is required" });
+      }
+
+      if (
+        !truckNo?.trim() ||
+        !Number.isFinite(litersValue) ||
+        litersValue <= 0 ||
+        !Number.isFinite(totalCostValue) ||
+        totalCostValue < 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Truck registration, liters, and a valid total cost are required.",
+        });
+      }
+
+      const currentLog = await fuelLogs.findOne({ id });
+      if (!currentLog) {
+        return res.status(404).json({ success: false, message: "Fuel log not found" });
+      }
+
+      const updatedFuelLog = {
+        ...currentLog,
+        truckNo: truckNo.trim(),
+        driver: driver?.trim() || currentLog.driver || "Unassigned",
+        liters: `${litersValue} L`,
+        totalCost: `₹${totalCostValue.toLocaleString("en-IN")}`,
+        odometer: odometer ? `${Number(odometer).toLocaleString()} km` : currentLog.odometer || "N/A",
+        mileage: mileage || currentLog.mileage || "4.0 km/L",
+        date: date || currentLog.date || new Date().toISOString().split("T")[0],
+        station: station?.trim() || currentLog.station || "Local Station",
+        updatedAt: new Date(),
+      };
+
+      await fuelLogs.updateOne({ id }, { $set: updatedFuelLog });
+
+      return res.status(200).json({
+        success: true,
+        message: "Fuel log updated successfully",
+        data: updatedFuelLog,
+      });
+    }
+
     if (req.method === "DELETE") {
-      const id = req.query.id;
+      const id = req.params?.id || req.query?.id;
       if (!id) {
         return res.status(400).json({ success: false, message: "Fuel log ID is required" });
       }

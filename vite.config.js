@@ -34,8 +34,9 @@ function apiMiddleware() {
     configureServer(server) {
       server.middlewares.use('/api', async (req, res, next) => {
         const requestUrl = new URL(req.originalUrl || req.url, 'http://localhost')
-        const match = requestUrl.pathname.match(/^\/(?:api\/)?([^/]+)\/?$/)
+        const match = requestUrl.pathname.match(/^\/(?:api\/)?([^/]+)(?:\/([^/]+))?\/?$/)
         const route = match?.[1]
+        const id = match?.[2]
 
         if (!route || !apiRoutes.has(route)) {
           next()
@@ -46,6 +47,7 @@ function apiMiddleware() {
           const apiModulePath = resolve(process.cwd(), 'api', `${route}.js`)
           const module = await import(pathToFileURL(apiModulePath).href)
           req.query = Object.fromEntries(requestUrl.searchParams)
+          req.params = { ...(req.params || {}), ...(id ? { id } : {}) }
           req.body = await readBody(req)
 
           const response = {

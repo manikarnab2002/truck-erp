@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Truck, Calendar } from 'lucide-react';
 
-export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
+export default function AddTruckModal({
+  isOpen,
+  onClose,
+  onAddTruck,
+  initialData = null,
+  mode = 'add',
+}) {
   const initialFormState = {
     regNo: '',
     model: '',
@@ -11,6 +17,23 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
   };
 
   const [formData, setFormData] = useState(initialFormState);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (mode === 'edit' && initialData) {
+      setFormData({
+        regNo: initialData.regNo || initialData.truckNumber || '',
+        model: initialData.model || '',
+        chassisNo: initialData.chassisNo || '',
+        type: initialData.type || 'Open_Truck',
+        date: initialData.date || initialData.registeredDate || '',
+      });
+      return;
+    }
+
+    setFormData(initialFormState);
+  }, [isOpen, mode, initialData]);
 
   if (!isOpen) return null;
 
@@ -38,15 +61,20 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
     }
   };
 
+  const handleClose = () => {
+    setFormData(initialFormState);
+    onClose();
+  };
+
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
         <div style={styles.header}>
           <div style={styles.headerTitle}>
             <Truck size={20} color="#1e293b" />
-            <h2 style={styles.title}>Add New Truck</h2>
+            <h2 style={styles.title}>{mode === 'edit' ? 'Edit Truck' : 'Add New Truck'}</h2>
           </div>
-          <button style={styles.closeBtn} onClick={onClose}>
+          <button type="button" style={styles.closeBtn} onClick={handleClose}>
             <X size={18} color="#64748b" />
           </button>
         </div>
@@ -66,7 +94,7 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
               />
             </div>
 
-              <div style={styles.field}>
+            <div style={styles.field}>
               <label style={styles.label}>Chassis Number *</label>
               <input
                 type="text"
@@ -121,11 +149,11 @@ export default function AddTruckModal({ isOpen, onClose, onAddTruck }) {
           </div>
 
           <div style={styles.footer}>
-            <button type="button" style={styles.cancelBtn} onClick={onClose}>
+            <button type="button" style={styles.cancelBtn} onClick={handleClose}>
               Cancel
             </button>
             <button type="submit" style={styles.submitBtn}>
-              Save & Register Truck
+              {mode === 'edit' ? 'Save Changes' : 'Save & Register Truck'}
             </button>
           </div>
         </form>

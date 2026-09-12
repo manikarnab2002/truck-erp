@@ -21,18 +21,17 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const {
         date,
+        truckRegNo,
         staffType,
-        staffName,
         paymentType,
-        paymentMethod,
         amount,
         notes,
       } = req.body;
 
-      if (!staffName || !staffType || !amount || Number(amount) <= 0) {
+      if (!truckRegNo || !staffType || !amount || Number(amount) <= 0) {
         return res.status(400).json({
           success: false,
-          message: "Staff name, type, and a valid amount are required.",
+          message: "Truck registration number, staff type, and a valid amount are required.",
         });
       }
 
@@ -44,10 +43,9 @@ export default async function handler(req, res) {
         date: paymentDate,
         month: `${year}-${month}`,
         year: year,
+        truckRegNo: truckRegNo.trim(),
         staffType,
-        staffName: staffName.trim(),
         paymentType: paymentType || "Salary",
-        paymentMethod: paymentMethod || "Cash",
         amount: Number(amount),
         notes: notes || "",
         createdAt: new Date(),

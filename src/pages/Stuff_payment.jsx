@@ -10,15 +10,14 @@ import {
   RotateCcw,
   Users,
   FileSpreadsheet,
-  CreditCard,
+  Truck,
 } from "lucide-react";
 
 const initialFormState = {
   date: new Date().toISOString().split("T")[0],
+  truckRegNo: "",
   staffType: "Driver",
-  staffName: "",
   paymentType: "Salary",
-  paymentMethod: "Cash",
   amount: "",
   notes: "",
 };
@@ -26,24 +25,24 @@ const initialFormState = {
 export default function StaffPayment() {
   const [formData, setFormData] = useState(initialFormState);
   const [payments, setPayments] = useState([]);
-  const [driverOptions, setDriverOptions] = useState([]);
+  const [truckOptions, setTruckOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     loadPayments();
-    loadDrivers();
+    loadTrucks();
   }, []);
 
-  const loadDrivers = async () => {
+  const loadTrucks = async () => {
     try {
-      const response = await fetch("/api/drivers");
+      const response = await fetch("/api/trucks");
       const data = await response.json();
       if (response.ok && Array.isArray(data)) {
-        setDriverOptions(data.map((d) => d.name?.trim()).filter(Boolean));
+        setTruckOptions(data.map((t) => (t.regNo || t.truckNo || t.registrationNumber || t.name)?.trim()).filter(Boolean));
       }
     } catch (error) {
-      console.error("Failed to load drivers:", error);
+      console.error("Failed to load trucks:", error);
     }
   };
 
@@ -67,8 +66,8 @@ export default function StaffPayment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.staffName.trim() || Number(formData.amount) <= 0) {
-      alert("Please provide a valid staff name and amount.");
+    if (!formData.truckRegNo.trim() || Number(formData.amount) <= 0) {
+      alert("Please provide a valid truck registration number and amount.");
       return;
     }
 
@@ -116,20 +115,18 @@ export default function StaffPayment() {
     const headers = [
       "Payment ID",
       "Date",
+      "Truck Reg No",
       "Staff Type",
-      "Staff Name",
       "Payment Type",
-      "Payment Method",
       "Amount",
       "Notes",
     ];
     const rows = payments.map((p) => [
       p.paymentId || "-",
       p.date || "-",
+      p.truckRegNo || "-",
       p.staffType || "-",
-      p.staffName || "-",
       p.paymentType || "-",
-      p.paymentMethod || "Cash",
       p.amount || 0,
       p.notes || "-",
     ]);
@@ -150,7 +147,7 @@ export default function StaffPayment() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Staff Payments</h1>
-          <p style={styles.subtitle}>Record driver & helper payments, allowances, and payment methods.</p>
+          <p style={styles.subtitle}>Record driver & helper payments, allowances, and vehicle allocations.</p>
         </div>
         <div style={styles.dateBox}>
           <Calendar size={17} />
@@ -195,11 +192,11 @@ export default function StaffPayment() {
             </div>
             <div>
               <h2 style={styles.cardTitle}>Add Staff Payment</h2>
-              <p style={styles.cardSubtitle}>Enter staff details, payment type, method, and amount.</p>
+              <p style={styles.cardSubtitle}>Enter date, truck registration number, payment type, and amount.</p>
             </div>
           </div>
 
-          <div style={styles.formGridThree}>
+          <div style={styles.formGridTwo}>
             <FormGroup label="Payment Date" required>
               <input
                 type="date"
@@ -211,6 +208,28 @@ export default function StaffPayment() {
               />
             </FormGroup>
 
+            <FormGroup label="Truck Reg No" required>
+              <input
+                type="text"
+                name="truckRegNo"
+                list="truck-options"
+                value={formData.truckRegNo}
+                onChange={handleChange}
+                placeholder="e.g. WB 19 A 1234"
+                style={styles.input}
+                required
+              />
+              {truckOptions.length > 0 && (
+                <datalist id="truck-options">
+                  {truckOptions.map((regNo, i) => (
+                    <option key={i} value={regNo} />
+                  ))}
+                </datalist>
+              )}
+            </FormGroup>
+          </div>
+
+          <div style={{ ...styles.formGridThree, marginTop: "16px" }}>
             <FormGroup label="Staff Type" required>
               <select
                 name="staffType"
@@ -223,40 +242,6 @@ export default function StaffPayment() {
               </select>
             </FormGroup>
 
-            <FormGroup label="Staff Name" required>
-              {formData.staffType === "Driver" && driverOptions.length > 0 ? (
-                <input
-                  type="text"
-                  name="staffName"
-                  list="driver-options"
-                  value={formData.staffName}
-                  onChange={handleChange}
-                  placeholder="Select or enter driver name"
-                  style={styles.input}
-                  required
-                />
-              ) : (
-                <input
-                  type="text"
-                  name="staffName"
-                  value={formData.staffName}
-                  onChange={handleChange}
-                  placeholder="e.g. Ramesh Kumar"
-                  style={styles.input}
-                  required
-                />
-              )}
-              {formData.staffType === "Driver" && (
-                <datalist id="driver-options">
-                  {driverOptions.map((name, i) => (
-                    <option key={i} value={name} />
-                  ))}
-                </datalist>
-              )}
-            </FormGroup>
-          </div>
-
-          <div style={{ ...styles.formGridThree, marginTop: "16px" }}>
             <FormGroup label="Payment Type" required>
               <select
                 name="paymentType"
@@ -270,20 +255,6 @@ export default function StaffPayment() {
                 <option value="Bonus">Bonus / Incentive</option>
                 <option value="Food Expense">Food / Daily Expense</option>
                 <option value="Other">Other</option>
-              </select>
-            </FormGroup>
-
-            <FormGroup label="Payment Method" required>
-              <select
-                name="paymentMethod"
-                value={formData.paymentMethod}
-                onChange={handleChange}
-                style={styles.input}
-              >
-                <option value="Cash">Cash</option>
-                <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
-                <option value="Bank Transfer">Bank Transfer (NEFT / IMPS)</option>
-                <option value="Cheque">Cheque</option>
               </select>
             </FormGroup>
 
@@ -311,7 +282,7 @@ export default function StaffPayment() {
                 name="notes"
                 value={formData.notes}
                 onChange={handleChange}
-                placeholder="e.g. Kolkata-Durgapur trip allowance or transaction ref no"
+                placeholder="e.g. Kolkata-Durgapur trip allowance or ref details"
                 style={styles.input}
               />
             </FormGroup>
@@ -339,7 +310,7 @@ export default function StaffPayment() {
         <div style={styles.recordsHeader}>
           <div>
             <h2 style={styles.recordsTitle}>Staff Payment Records</h2>
-            <p style={styles.recordsSubtitle}>View all recorded payments, payment types, and methods.</p>
+            <p style={styles.recordsSubtitle}>View all recorded payments grouped by vehicle and role.</p>
           </div>
           <div style={styles.recordsActions}>
             <button type="button" style={styles.exportBtn} onClick={handleExportCsv}>
@@ -356,7 +327,7 @@ export default function StaffPayment() {
           <div style={styles.emptyState}>
             <Users size={38} color="#94a3b8" />
             <h3>No Payment Records Found</h3>
-            <p>Add your first driver or helper payment using the form above.</p>
+            <p>Add your first payment record using the form above.</p>
           </div>
         ) : (
           <div style={styles.tableWrapper}>
@@ -364,10 +335,9 @@ export default function StaffPayment() {
               <thead>
                 <tr>
                   <th style={styles.th}>Date</th>
+                  <th style={styles.th}>Truck Reg No</th>
                   <th style={styles.th}>Role</th>
-                  <th style={styles.th}>Staff Name</th>
                   <th style={styles.th}>Payment Type</th>
-                  <th style={styles.th}>Method</th>
                   <th style={styles.th}>Amount</th>
                   <th style={styles.th}>Notes</th>
                   <th style={styles.th}>Action</th>
@@ -380,6 +350,12 @@ export default function StaffPayment() {
                       {p.date ? new Date(p.date).toLocaleDateString("en-IN") : "-"}
                     </td>
                     <td style={styles.td}>
+                      <span style={styles.truckBadge}>
+                        <Truck size={13} style={{ marginRight: "5px" }} />
+                        <strong>{p.truckRegNo || "-"}</strong>
+                      </span>
+                    </td>
+                    <td style={styles.td}>
                       <span
                         style={{
                           ...styles.badge,
@@ -390,16 +366,7 @@ export default function StaffPayment() {
                         {p.staffType}
                       </span>
                     </td>
-                    <td style={styles.td}>
-                      <strong>{p.staffName}</strong>
-                    </td>
                     <td style={styles.td}>{p.paymentType}</td>
-                    <td style={styles.td}>
-                      <span style={styles.methodBadge}>
-                        <CreditCard size={12} style={{ marginRight: "4px" }} />
-                        {p.paymentMethod || "Cash"}
-                      </span>
-                    </td>
                     <td style={{ ...styles.td, fontWeight: "700", color: "#0f172a" }}>
                       ₹ {Number(p.amount || 0).toLocaleString("en-IN")}
                     </td>
@@ -527,6 +494,11 @@ const styles = {
     fontSize: "12px",
     color: "#64748b",
     margin: "2px 0 0",
+  },
+  formGridTwo: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "16px",
   },
   formGridThree: {
     display: "grid",
@@ -676,15 +648,15 @@ const styles = {
     fontSize: "11px",
     fontWeight: "700",
   },
-  methodBadge: {
+  truckBadge: {
     display: "inline-flex",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    color: "#334155",
+    backgroundColor: "#f8fafc",
+    color: "#0f172a",
     padding: "3px 8px",
     borderRadius: "5px",
-    fontSize: "11px",
-    fontWeight: "600",
+    border: "1px solid #e2e8f0",
+    fontSize: "12px",
   },
   deleteBtn: {
     display: "flex",

@@ -38,14 +38,17 @@ const normalizeDeliveryRecord = (item) => {
   const fuelCost = Number(item.fuelCost || 0);
   const tollCost = Number(item.tollCost || 0);
   const maintenanceCost = Number(item.maintenanceCost || 0);
+  const ureaCost = Number(item.ureaCost || 0);
+  const extraCost = Number(item.extraCost || 0);
   const driverSalary = Number(item.driverSalary || 0);
   const totalExpense = Number(
-    item.totalExpense ?? item.expense ?? fuelCost + tollCost + maintenanceCost + driverSalary
+    item.totalExpense ?? item.expense ?? fuelCost + tollCost + maintenanceCost + ureaCost + extraCost + driverSalary
   );
-  
-  // Follows Truck ERP rule: net_profit = deliveryCost - totalExpense - dueAmount
+  const receivedAmount = Math.max(deliveryCost - dueAmount, 0);
+
+  // Follows Truck ERP rule: net_profit = receivedAmount - totalExpense
   const calculatedNetProfit = Number(
-    item.net_profit ?? item.netIncome ?? item.netProfit ?? (deliveryCost - totalExpense - dueAmount)
+    item.net_profit ?? item.netIncome ?? item.netProfit ?? (receivedAmount - totalExpense)
   );
   
   const quantityTonnes = Number(item.quantity ?? item.quantityTonnes ?? item.goingQuantity ?? 0);

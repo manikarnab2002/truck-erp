@@ -38,6 +38,9 @@ export default function Drivers() {
   const [deletingId, setDeletingId] =
     useState(null);
 
+  const [editingDriver, setEditingDriver] =
+    useState(null);
+
 
   // ==========================================
   // LOAD DRIVERS WHEN PAGE OPENS
@@ -130,10 +133,13 @@ export default function Drivers() {
 
       try {
 
+        const method = editingDriver ? "PUT" : "POST";
+        const url = editingDriver ? `/api/drivers/${encodeURIComponent(editingDriver.id)}` : "/api/drivers";
+
         const response = await fetch(
-          "/api/drivers",
+          url,
           {
-            method: "POST",
+            method,
 
             headers: {
               "Content-Type":
@@ -154,16 +160,22 @@ export default function Drivers() {
 
           alert(
             result.message ||
-            "Failed to add driver."
+            (editingDriver ? "Failed to update driver." : "Failed to add driver.")
           );
 
           return false;
 
         }
 
-
-        // Add newly created driver
-        // at the beginning of table
+        if (editingDriver) {
+          setDrivers((prev) =>
+            prev.map((driver) =>
+              driver.id === editingDriver.id ? result.data : driver
+            )
+          );
+          setEditingDriver(null);
+          return true;
+        }
 
         setDrivers((prev) => [
 
@@ -193,6 +205,11 @@ export default function Drivers() {
       }
 
     };
+
+  const openEditDriver = (driver) => {
+    setEditingDriver(driver);
+    setIsModalOpen(true);
+  };
 
 
   // ==========================================
@@ -467,15 +484,18 @@ export default function Drivers() {
 
         isOpen={isModalOpen}
 
-        onClose={() =>
-          setIsModalOpen(false)
-        }
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingDriver(null);
+        }}
 
         onAddDriver={
           handleAddDriver
         }
 
         truckOptions={truckOptions}
+        initialData={editingDriver}
+        mode={editingDriver ? "edit" : "add"}
 
       />
 
@@ -734,46 +754,59 @@ export default function Drivers() {
                       </td>
 
 
-                      {/* DELETE */}
+                      {/* EDIT / DELETE */}
 
                       <td style={styles.td}>
+                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                          <button
+                            type="button"
+                            style={{
+                              ...styles.actionBtn,
+                              color: "#2563eb",
+                              fontWeight: "600",
+                            }}
+                            onClick={() => openEditDriver(driver)}
+                          >
+                            Edit
+                          </button>
 
-                        <button
-                          type="button"
-                          style={{
-                            ...styles.actionBtn,
+                          <button
+                            type="button"
+                            style={{
+                              ...styles.actionBtn,
 
-                            color:
+                              color:
+                                deletingId ===
+                                driver.id
+                                  ? "#94a3b8"
+                                  : "#ef4444",
+
+                              fontWeight: "600",
+
+                              cursor:
+                                deletingId ===
+                                driver.id
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                            onClick={() =>
+                              handleDelete(
+                                driver.id
+                              )
+                            }
+                            disabled={
                               deletingId ===
                               driver.id
-                                ? "#94a3b8"
-                                : "#ef4444",
+                            }
+                          >
 
-                            fontWeight: "600",
-
-                            cursor:
-                              deletingId ===
-                              driver.id
-                                ? "not-allowed"
-                                : "pointer",
-                          }}
-                          onClick={() =>
-                            handleDelete(
-                              driver.id
-                            )
-                          }
-                          disabled={
-                            deletingId ===
+                            {deletingId ===
                             driver.id
-                          }
-                        >
+                              ? "Deleting..."
+                              : "Delete"}
 
-                          {deletingId ===
-                          driver.id
-                            ? "Deleting..."
-                            : "Delete"}
-
-                        </button>
+                          </button>
+                        </div>
 
                       </td>
 

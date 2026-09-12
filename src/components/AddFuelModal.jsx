@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
-import { X, Fuel, DollarSign, Calendar, Gauge, User, MapPin } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Fuel, Calendar, Gauge } from 'lucide-react';
 
-export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptions = [] }) {
+export default function AddFuelModal({
+  isOpen,
+  onClose,
+  onAddFuelLog,
+  truckOptions = [],
+  initialData = null,
+  mode = 'add',
+}) {
   const initialFormState = {
     truckNo: '',
     driver: '',
@@ -15,11 +22,30 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
 
   const [formData, setFormData] = useState(initialFormState);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (mode === 'edit' && initialData) {
+      setFormData({
+        truckNo: initialData.truckNo || '',
+        driver: initialData.driver || '',
+        liters: String(initialData.liters || '').replace(/[^0-9.]/g, ''),
+        totalCost: String(initialData.totalCost || '').replace(/[^0-9.]/g, ''),
+        odometer: String(initialData.odometer || '').replace(/[^0-9.]/g, ''),
+        mileage: initialData.mileage || '4.0 km/L',
+        date: initialData.date || '',
+        station: initialData.station || '',
+      });
+      return;
+    }
+
     if (truckOptions.length && !formData.truckNo) {
       setFormData((prev) => ({ ...prev, truckNo: truckOptions[0] }));
+      return;
     }
-  }, [truckOptions, formData.truckNo]);
+
+    setFormData(initialFormState);
+  }, [isOpen, mode, initialData, truckOptions, formData.truckNo]);
 
   if (!isOpen) return null;
 
@@ -47,15 +73,20 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
     }
   };
 
+  const handleClose = () => {
+    setFormData(initialFormState);
+    onClose();
+  };
+
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
         <div style={styles.header}>
           <div style={styles.headerTitle}>
             <Fuel size={20} color="#1e293b" />
-            <h2 style={styles.title}>Record Fuel Entry</h2>
+            <h2 style={styles.title}>{mode === 'edit' ? 'Edit Fuel Entry' : 'Record Fuel Entry'}</h2>
           </div>
-          <button style={styles.closeBtn} onClick={onClose}>
+          <button type="button" style={styles.closeBtn} onClick={handleClose}>
             <X size={18} color="#64748b" />
           </button>
         </div>
@@ -80,7 +111,17 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
               </select>
             </div>
 
-            
+            <div style={styles.field}>
+              <label style={styles.label}>Driver</label>
+              <input
+                type="text"
+                name="driver"
+                placeholder="Driver name"
+                value={formData.driver}
+                onChange={handleChange}
+                style={styles.input}
+              />
+            </div>
 
             <div style={styles.field}>
               <label style={styles.label}>Fuel Quantity (Liters) *</label>
@@ -100,17 +141,15 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
 
             <div style={styles.field}>
               <label style={styles.label}>Total Amount Paid (₹) *</label>
-              <div style={styles.iconInputWrapper}>
-                <input
-                  type="number"
-                  name="totalCost"
-                  placeholder="e.g. 13500"
-                  value={formData.totalCost}
-                  onChange={handleChange}
-                  required
-                  style={{ ...styles.input, paddingLeft: '12px' }}
-                />
-              </div>
+              <input
+                type="number"
+                name="totalCost"
+                placeholder="e.g. 13500"
+                value={formData.totalCost}
+                onChange={handleChange}
+                required
+                style={styles.input}
+              />
             </div>
 
             <div style={styles.field}>
@@ -122,7 +161,6 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
                   name="odometer"
                   placeholder="e.g. 125000"
                   value={formData.odometer}
-                  
                   onChange={handleChange}
                   min="0"
                   style={{ ...styles.input, paddingLeft: '32px' }}
@@ -130,7 +168,18 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
               </div>
             </div>
 
-            
+            <div style={styles.field}>
+              <label style={styles.label}>Station</label>
+              <input
+                type="text"
+                name="station"
+                placeholder="Station name"
+                value={formData.station}
+                onChange={handleChange}
+                style={styles.input}
+              />
+            </div>
+
             <div style={styles.field}>
               <label style={styles.label}>Refill Date</label>
               <div style={styles.iconInputWrapper}>
@@ -144,16 +193,14 @@ export default function AddFuelModal({ isOpen, onClose, onAddFuelLog, truckOptio
                 />
               </div>
             </div>
-
-            
           </div>
 
           <div style={styles.footer}>
-            <button type="button" style={styles.cancelBtn} onClick={onClose}>
+            <button type="button" style={styles.cancelBtn} onClick={handleClose}>
               Cancel
             </button>
             <button type="submit" style={styles.submitBtn}>
-              Save Fuel Log
+              {mode === 'edit' ? 'Save Changes' : 'Save Fuel Log'}
             </button>
           </div>
         </form>

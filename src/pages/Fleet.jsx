@@ -29,6 +29,7 @@ export default function Fleet() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTruck, setEditingTruck] = useState(null);
 
   useEffect(() => {
     loadTrucks();
@@ -54,8 +55,11 @@ export default function Fleet() {
 
   const handleAddTruck = async (newTruck) => {
     try {
-      const response = await fetch('/api/trucks', {
-        method: 'POST',
+      const method = editingTruck ? 'PUT' : 'POST';
+      const url = editingTruck ? `/api/trucks/${encodeURIComponent(editingTruck.id)}` : '/api/trucks';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -65,17 +69,23 @@ export default function Fleet() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.message || 'Failed to add truck.');
+        alert(result.message || (editingTruck ? 'Failed to update truck.' : 'Failed to add truck.'));
         return false;
       }
 
       await loadTrucks();
+      setEditingTruck(null);
       return true;
     } catch (error) {
-      console.error('Add truck error:', error);
+      console.error('Save truck error:', error);
       alert(error.message || 'Unable to save truck.');
       return false;
     }
+  };
+
+  const openEditTruck = (truck) => {
+    setEditingTruck(truck);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -131,8 +141,13 @@ export default function Fleet() {
 
       <AddTruckModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTruck(null);
+        }}
         onAddTruck={handleAddTruck}
+        initialData={editingTruck}
+        mode={editingTruck ? 'edit' : 'add'}
       />
 
       <div style={styles.filterCard}>
@@ -173,12 +188,20 @@ export default function Fleet() {
                   <td style={styles.td}>{truck.model}</td>
                   <td style={styles.td}>{truck.type}</td>
                   <td style={styles.td}>
-                    <button
-                      style={{ ...styles.actionBtn, color: '#ef4444', fontWeight: '600' }}
-                      onClick={() => handleDelete(truck.id)}
-                    >
-                      Delete
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        style={{ ...styles.actionBtn, color: '#2563eb', fontWeight: '600' }}
+                        onClick={() => openEditTruck(truck)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        style={{ ...styles.actionBtn, color: '#ef4444', fontWeight: '600' }}
+                        onClick={() => handleDelete(truck.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

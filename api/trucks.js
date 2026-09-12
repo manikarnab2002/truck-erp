@@ -80,9 +80,78 @@ export default async function handler(req, res) {
       });
     }
 
+    // PUT
+    if (req.method === "PUT") {
+      const id = req.params?.id || req.query?.id;
+      const payload = req.body || {};
+      const {
+        regNo,
+        chassisNo,
+        model,
+        type,
+        date,
+      } = payload;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: "Truck ID is required",
+        });
+      }
+
+      const cleanRegNo = typeof regNo === "string" ? regNo.trim() : "";
+      const cleanModel = typeof model === "string" ? model.trim() : "";
+
+      if (!cleanRegNo || !cleanModel) {
+        return res.status(400).json({
+          success: false,
+          message: "Registration number and model are required",
+        });
+      }
+
+      const currentTruck = await trucks.findOne({ id });
+
+      if (!currentTruck) {
+        return res.status(404).json({
+          success: false,
+          message: "Truck not found",
+        });
+      }
+
+      const duplicateTruck = await trucks.findOne({
+        regNo: cleanRegNo,
+        id: { $ne: id },
+      });
+
+      if (duplicateTruck) {
+        return res.status(409).json({
+          success: false,
+          message: "A truck with this registration number already exists",
+        });
+      }
+
+      const updatedTruck = {
+        ...currentTruck,
+        regNo: cleanRegNo,
+        chassisNo: typeof chassisNo === "string" ? chassisNo.trim() : currentTruck.chassisNo || "",
+        model: cleanModel,
+        type: type || currentTruck.type || "Open_Truck",
+        date: date || currentTruck.date || "",
+        updatedAt: new Date(),
+      };
+
+      await trucks.updateOne({ id }, { $set: updatedTruck });
+
+      return res.status(200).json({
+        success: true,
+        message: "Truck updated successfully",
+        data: updatedTruck,
+      });
+    }
+
     // DELETE
     if (req.method === "DELETE") {
-      const id = req.query.id;
+      const id = req.params?.id || req.query?.id;
 
       if (!id) {
         return res.status(400).json({

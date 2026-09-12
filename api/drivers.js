@@ -169,10 +169,64 @@ export default async function handler(req, res) {
     ========================================
     */
 
+    if (req.method === "PUT") {
+
+      const id = req.params?.id || req.query?.id;
+      const payload = req.body || {};
+      const {
+        name,
+        phone,
+        assignedTruck,
+        status,
+      } = payload;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: "Driver ID is required.",
+        });
+      }
+
+      const cleanName = typeof name === "string" ? name.trim() : "";
+      const cleanPhone = typeof phone === "string" ? phone.trim() : "";
+
+      if (!cleanName) {
+        return res.status(400).json({
+          success: false,
+          message: "Name is required.",
+        });
+      }
+
+      const currentDriver = await drivers.findOne({ id });
+
+      if (!currentDriver) {
+        return res.status(404).json({
+          success: false,
+          message: "Driver not found.",
+        });
+      }
+
+      const updatedDriver = {
+        ...currentDriver,
+        name: cleanName,
+        phone: cleanPhone,
+        assignedTruck: assignedTruck || currentDriver.assignedTruck || "Unassigned",
+        status: status || currentDriver.status || "Available",
+        updatedAt: new Date(),
+      };
+
+      await drivers.updateOne({ id }, { $set: updatedDriver });
+
+      return res.status(200).json({
+        success: true,
+        message: "Driver updated successfully.",
+        data: updatedDriver,
+      });
+    }
+
     if (req.method === "DELETE") {
 
-      const id =
-        req.query.id;
+      const id = req.params?.id || req.query?.id;
 
 
       if (!id) {

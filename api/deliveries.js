@@ -7,7 +7,9 @@ export default async function handler(req, res) {
     const db = client.db("truck_erp");
     const deliveries = db.collection("deliveries");
 
+    // =========================
     // GET DELIVERIES
+    // =========================
     if (req.method === "GET") {
       const data = await deliveries
         .find({})
@@ -20,65 +22,143 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    // =========================
     // ADD DELIVERY
+    // =========================
     if (req.method === "POST") {
       const deliveryCost = Number(req.body.deliveryCost || 0);
-      const advancePaid = Number(req.body.advancePaid || 0);
+      const advancePaid = Number(req.body.advancePaid ?? req.body.amountPaid ?? 0);
+
       const fuelCost = Number(req.body.fuelCost || 0);
       const tollCost = Number(req.body.tollCost || 0);
       const maintenanceCost = Number(req.body.maintenanceCost || 0);
+      const ureaCost = Number(req.body.ureaCost || 0);
+      const extraCost = Number(req.body.extraCost || 0);
 
-      // Calculations
+      // =========================
+      // CALCULATIONS
+      // =========================
+
+      // Due = Delivery Cost - Advance
       const dueAmount = Math.max(deliveryCost - advancePaid, 0);
-      const totalExpense = fuelCost + tollCost + maintenanceCost;
-      const netProfit = deliveryCost - totalExpense - dueAmount;
+
+      // Total Expenses
+      const totalExpense =
+        fuelCost +
+        tollCost +
+        maintenanceCost +
+        ureaCost +
+        extraCost;
+
+      // Amount actually received
+      const receivedAmount = Math.max(
+        deliveryCost - dueAmount,
+        0
+      );
+
+      // Net Profit
+      const netProfit = receivedAmount - totalExpense;
 
       const delivery = {
-        // Truck Info
+        // =========================
+        // TRUCK INFO
+        // =========================
         truckName: req.body.truckName || "",
         truckNumber: req.body.truckNumber || "",
         driverName: req.body.driverName || "",
         status: req.body.status || "In Transit",
 
-        // Delivery Route (Going & Coming)
-        goingDate: req.body.goingDate || new Date().toISOString().split("T")[0],
+        // =========================
+        // DELIVERY ROUTE
+        // =========================
+        goingDate:
+          req.body.goingDate ||
+          new Date().toISOString().split("T")[0],
+
         goingSource: req.body.goingSource || "",
         goingDestination: req.body.goingDestination || "",
+
         deliveryDate:
           req.body.deliveryDate ||
           req.body.goingDate ||
           new Date().toISOString().split("T")[0],
-        source: req.body.source || req.body.goingSource || "",
-        destination: req.body.destination || req.body.goingDestination || "",
+
+        source:
+          req.body.source ||
+          req.body.goingSource ||
+          "",
+
+        destination:
+          req.body.destination ||
+          req.body.goingDestination ||
+          "",
+
         comingDate: req.body.comingDate || "",
         comingSource: req.body.comingSource || "",
         comingDestination: req.body.comingDestination || "",
 
-        // Materials & Quantity
+        // =========================
+        // MATERIALS & QUANTITY
+        // =========================
         going_material: req.body.going_material || "",
         coming_material: req.body.coming_material || "",
-        goingQuantity: Number(req.body.goingQuantity ?? req.body.quantity ?? 0),
-        comingQuantity: Number(req.body.comingQuantity || 0),
+
+        goingQuantity: Number(
+          req.body.goingQuantity ??
+          req.body.quantity ??
+          0
+        ),
+
+        comingQuantity: Number(
+          req.body.comingQuantity || 0
+        ),
+
         quantityUnit: req.body.quantityUnit || "Ton",
 
-        // Financials
+        // =========================
+        // FINANCIAL DETAILS
+        // =========================
         deliveryCost,
-        advancePaid,
-        amountPaid: advancePaid,
+
+        advancePaid: receivedAmount,
+        amountPaid: receivedAmount,
+
         dueAmount,
+
         fuelCost,
         tollCost,
         maintenanceCost,
-        maintenanceType: req.body.maintenanceType || "",
+
+        // IMPORTANT: UREA
+        ureaCost,
+
+        // IMPORTANT: EXTRA COST
+        extraCost,
+
+        extraCostNote:
+          req.body.extraCostNote || "",
+
         totalExpense,
+
+        // All three profit fields contain
+        // exactly the same calculated value
         net_profit: netProfit,
         netProfit,
         netIncome: netProfit,
 
-        // Additional Notes
+        maintenanceType:
+          req.body.maintenanceType || "",
+
+        maintenanceDetails:
+          req.body.maintenanceDetails || "",
+
+        // =========================
+        // NOTES
+        // =========================
         notes: req.body.notes || "",
-        maintenanceDetails: req.body.maintenanceDetails || "",
+
         createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       const result = await deliveries.insertOne(delivery);
@@ -86,49 +166,105 @@ export default async function handler(req, res) {
       return res.status(201).json({
         success: true,
         id: result.insertedId,
-        data: { _id: result.insertedId, ...delivery },
+        data: {
+          _id: result.insertedId,
+          ...delivery,
+        },
         message: "Delivery saved successfully",
       });
     }
 
+    // =========================
     // UPDATE DUE AMOUNT
+    // =========================
     if (req.method === "PATCH") {
       const id = req.query.id;
       const dueAmount = Number(req.body?.dueAmount);
 
       if (!id || !ObjectId.isValid(id)) {
-        return res.status(400).json({ success: false, message: "Valid delivery ID is required" });
+        return res.status(400).json({
+          success: false,
+          message: "Valid delivery ID is required",
+        });
       }
+
       if (!Number.isFinite(dueAmount) || dueAmount < 0) {
-        return res.status(400).json({ success: false, message: "A valid due amount is required" });
+        return res.status(400).json({
+          success: false,
+          message: "A valid due amount is required",
+        });
       }
 
-      const delivery = await deliveries.findOne({ _id: new ObjectId(id) });
+      const delivery = await deliveries.findOne({
+        _id: new ObjectId(id),
+      });
+
       if (!delivery) {
-        return res.status(404).json({ success: false, message: "Delivery not found" });
+        return res.status(404).json({
+          success: false,
+          message: "Delivery not found",
+        });
       }
 
-      const deliveryCost = Number(delivery.deliveryCost || 0);
+      const deliveryCost =
+        Number(delivery.deliveryCost || 0);
 
-      // Fallback in case totalExpense was not stored previously
+      // ALWAYS recalculate expenses from individual fields.
+      // Do NOT trust old totalExpense values.
+      const fuelCost =
+        Number(delivery.fuelCost || 0);
+
+      const tollCost =
+        Number(delivery.tollCost || 0);
+
+      const maintenanceCost =
+        Number(delivery.maintenanceCost || 0);
+
+      const ureaCost =
+        Number(delivery.ureaCost || 0);
+
+      const extraCost =
+        Number(delivery.extraCost || 0);
+
       const totalExpense =
-        delivery.totalExpense !== undefined
-          ? Number(delivery.totalExpense)
-          : Number(delivery.fuelCost || 0) +
-            Number(delivery.tollCost || 0) +
-            Number(delivery.maintenanceCost || 0);
+        fuelCost +
+        tollCost +
+        maintenanceCost +
+        ureaCost +
+        extraCost;
 
-      // Net profit = (Total revenue collected) - total expense
-      const netProfit = deliveryCost - totalExpense - dueAmount;
-      const updatedReceived = Math.max(deliveryCost - dueAmount, 0);
+      // Amount actually received
+      const receivedAmount = Math.max(
+        deliveryCost - dueAmount,
+        0
+      );
+
+      // Net Profit
+      const netProfit =
+        receivedAmount - totalExpense;
 
       const updateFields = {
         dueAmount,
+
+        receivedAmount,
+
+        amountPaid: receivedAmount,
+        advancePaid: receivedAmount,
+
+        // Re-save all expense values
+        fuelCost,
+        tollCost,
+        maintenanceCost,
+        ureaCost,
+        extraCost,
+
         totalExpense,
+
         net_profit: netProfit,
         netProfit,
         netIncome: netProfit,
-        amountPaid: updatedReceived,
+
+        updatedAt: new Date(),
       };
 
       await deliveries.updateOne(
@@ -139,20 +275,25 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         dueAmount,
+        receivedAmount,
+        totalExpense,
         net_profit: netProfit,
         netProfit,
-        amountPaid: updatedReceived,
+        amountPaid: receivedAmount,
+        advancePaid: receivedAmount,
       });
     }
 
+    // =========================
     // DELETE DELIVERY
+    // =========================
     if (req.method === "DELETE") {
       const id = req.query.id;
 
-      if (!id) {
+      if (!id || !ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
-          message: "Delivery ID is required",
+          message: "Valid Delivery ID is required",
         });
       }
 
@@ -169,8 +310,10 @@ export default async function handler(req, res) {
     return res.status(405).json({
       message: "Method not allowed",
     });
+
   } catch (error) {
-    console.error(error);
+    console.error("Delivery API error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Server error",

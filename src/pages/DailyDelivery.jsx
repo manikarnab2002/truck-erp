@@ -45,11 +45,45 @@ const emptyForm = {
   fuelCost: "",
   tollCost: "",
   maintenanceCost: "",
+  ureaCost: "",
+  extraCost: "",
+  extraCostNote: "",
   maintenanceType: "",
   netProfit: "0",
 
   // Additional Notes
   notes: "",
+};
+
+const calculateDeliveryMetrics = ({
+  deliveryCost = 0,
+  advancePaid = 0,
+  dueAmount,
+  fuelCost = 0,
+  tollCost = 0,
+  maintenanceCost = 0,
+  ureaCost = 0,
+  extraCost = 0,
+}) => {
+  const numericDeliveryCost = Number(deliveryCost || 0);
+  const numericAdvancePaid = Number(advancePaid || 0);
+  const numericDueAmount = Number(dueAmount ?? Math.max(numericDeliveryCost - numericAdvancePaid, 0));
+  const totalExpense =
+    Number(fuelCost || 0) +
+    Number(tollCost || 0) +
+    Number(maintenanceCost || 0) +
+    Number(ureaCost || 0) +
+    Number(extraCost || 0);
+
+  const receivedAmount = Math.max(numericDeliveryCost - numericDueAmount, 0);
+  const netProfit = receivedAmount - totalExpense;
+
+  return {
+    dueAmount: Math.max(numericDeliveryCost - numericAdvancePaid, 0),
+    receivedAmount,
+    totalExpense,
+    netProfit,
+  };
 };
 
 export default function DailyDelivery() {
@@ -72,7 +106,7 @@ export default function DailyDelivery() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Unable to load truck list.");
       const options = Array.isArray(data)
-        ? data.map((truck) => truck?.regNo?.trim()).filter(Boolean)
+        ? data.map((truck) => (truck?.regNo || truck?.truckNo || truck?.name)?.trim()).filter(Boolean)
         : [];
       setTruckOptions([...new Set(options)]);
     } catch (error) {
@@ -85,51 +119,76 @@ export default function DailyDelivery() {
       const response = await fetch("/api/drivers");
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Unable to load driver list.");
+
       const options = Array.isArray(data)
-        ? data.map((driver) => driver?.name?.trim()).filter(Boolean)
+        ? data
+            .filter((driver) => driver?.name)
+            .map((driver) => ({
+              name: driver.name.trim(),
+              assignedTruck: driver.assignedTruck || "",
+            }))
         : [];
-      setDriverOptions([...new Set(options)]);
+
+      setDriverOptions(options);
     } catch (error) {
       console.error("Load driver options error:", error);
     }
   };
+
+  useEffect(() => {
+    if (!formData.truckNumber) {
+      setFormData((prev) => ({ ...prev, driverName: "" }));
+      return;
+    }
+
+    const assignedDriver = driverOptions.find(
+      (driver) => (driver.assignedTruck || "").trim() === formData.truckNumber.trim()
+    );
+
+    if (assignedDriver && assignedDriver.name !== formData.driverName) {
+      setFormData((prev) => ({ ...prev, driverName: assignedDriver.name }));
+    }
+  }, [formData.truckNumber, driverOptions]);
 
   const loadDeliveries = async () => {
     try {
       const response = await fetch("/api/deliveries");
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Unable to load deliveries.");
-      setDeliveries(data);
+      setDeliveries(Array.isArray(data) ? data : data.data || []);
     } catch (error) {
       console.error("Load deliveries error:", error);
-      alert("Unable to load delivery records. Please check your backend connection.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle input changes and calculate due amount and net profit correctly
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
 
-      // Financial calculations
       const deliveryCost = Number(name === "deliveryCost" ? value : prev.deliveryCost) || 0;
       const advancePaid = Number(name === "advancePaid" ? value : prev.advancePaid) || 0;
       const fuelCost = Number(name === "fuelCost" ? value : prev.fuelCost) || 0;
       const tollCost = Number(name === "tollCost" ? value : prev.tollCost) || 0;
       const maintenanceCost = Number(name === "maintenanceCost" ? value : prev.maintenanceCost) || 0;
+      const ureaCost = Number(name === "ureaCost" ? value : prev.ureaCost) || 0;
+      const extraCost = Number(name === "extraCost" ? value : prev.extraCost) || 0;
 
-      // Due Amount = Delivery Cost - Advance Paid
-      updated.dueAmount = Math.max(deliveryCost - advancePaid, 0).toString();
+      const metrics = calculateDeliveryMetrics({
+        deliveryCost,
+        advancePaid,
+        fuelCost,
+        tollCost,
+        maintenanceCost,
+        ureaCost,
+        extraCost,
+      });
 
-      // Total Expenses = Fuel + Toll + Maintenance
-      const totalExpenses = fuelCost + tollCost + maintenanceCost;
-
-      // Net Profit = Total Revenue (Advance Paid) - Total Expenses
-      updated.netProfit = (advancePaid - totalExpenses).toString();
+      updated.dueAmount = metrics.dueAmount.toString();
+      updated.netProfit = metrics.netProfit.toString();
 
       return updated;
     });
@@ -179,7 +238,7 @@ export default function DailyDelivery() {
         throw new Error(result.message || "Unable to delete delivery.");
       }
 
-      setDeliveries((prev) => prev.filter((delivery) => delivery._id !== id));
+      setDeliveries((prev) => prev.filter((delivery) => (delivery._id || delivery.id) !== id));
     } catch (error) {
       console.error("Delete delivery error:", error);
       alert(error.message || "Unable to delete delivery.");
@@ -211,6 +270,9 @@ export default function DailyDelivery() {
       "Fuel Cost",
       "Toll Cost",
       "Maintenance Cost",
+      "Urea Cost",
+      "Extra Cost",
+      "Extra Cost Note",
       "Net Profit",
       "Status",
       "Notes",
@@ -235,6 +297,9 @@ export default function DailyDelivery() {
       delivery.fuelCost || 0,
       delivery.tollCost || 0,
       delivery.maintenanceCost || 0,
+      delivery.ureaCost || 0,
+      delivery.extraCost || 0,
+      delivery.extraCostNote || "",
       delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0,
       delivery.status || "",
       delivery.notes || "",
@@ -242,63 +307,73 @@ export default function DailyDelivery() {
     exportCsv(`Daily_Deliveries_${new Date().toISOString().split("T")[0]}.csv`, headers, rows);
   };
 
-  // Handles due collection/updates when customers pay next day
   const handleEditDueAmount = async (delivery) => {
-  const currentDueAmount = Number(delivery.dueAmount || 0);
-  const input = window.prompt(
-    `Current Due: ₹${currentDueAmount.toLocaleString("en-IN")}\nEnter remaining due amount (enter 0 if fully cleared):`,
-    currentDueAmount.toString()
-  );
-
-  if (input === null) return;
-  const newDue = Number(input.trim());
-
-  if (isNaN(newDue) || newDue < 0) {
-    alert("Please enter a valid positive number or 0.");
-    return;
-  }
-
-  // Calculate actual revenue collected & expenses
-  const deliveryCost = Number(delivery.deliveryCost || 0);
-  const fuelCost = Number(delivery.fuelCost || 0);
-  const tollCost = Number(delivery.tollCost || 0);
-  const maintenanceCost = Number(delivery.maintenanceCost || 0);
-  
-  const totalExpenses = fuelCost + tollCost + maintenanceCost;
-  // Total Revenue Collected = Total Cost - Remaining Due
-  const totalReceived = deliveryCost - newDue;
-  const updatedProfit = totalReceived - totalExpenses;
-
-  try {
-    const response = await fetch(`/api/deliveries?id=${encodeURIComponent(delivery._id)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        dueAmount: newDue,
-        netProfit: updatedProfit,
-      }),
-    });
-    const result = await response.json();
-
-    if (!response.ok) throw new Error(result.message || "Unable to update due amount.");
-
-    setDeliveries((prev) =>
-      prev.map((item) =>
-        item._id === delivery._id
-          ? {
-              ...item,
-              dueAmount: newDue,
-              net_profit: result.net_profit ?? result.netProfit ?? updatedProfit,
-              netProfit: result.net_profit ?? result.netProfit ?? updatedProfit,
-            }
-          : item
-      )
+    const deliveryId = delivery._id || delivery.id;
+    const currentDueAmount = Number(delivery.dueAmount || 0);
+    const input = window.prompt(
+      `Current Due: ₹${currentDueAmount.toLocaleString("en-IN")}\nEnter remaining due amount (enter 0 if fully cleared):`,
+      currentDueAmount.toString()
     );
-  } catch (error) {
-    console.error("Update due amount error:", error);
-    alert(error.message || "Unable to update due amount.");
-  }
-};
+
+    if (input === null) return;
+    const newDue = Number(input.trim());
+
+    if (isNaN(newDue) || newDue < 0) {
+      alert("Please enter a valid positive number or 0.");
+      return;
+    }
+
+    const deliveryCost = Number(delivery.deliveryCost || 0);
+    const fuelCost = Number(delivery.fuelCost || 0);
+    const tollCost = Number(delivery.tollCost || 0);
+    const maintenanceCost = Number(delivery.maintenanceCost || 0);
+    const ureaCost = Number(delivery.ureaCost || 0);
+    const extraCost = Number(delivery.extraCost || 0);
+
+    const metrics = calculateDeliveryMetrics({
+      deliveryCost,
+      dueAmount: newDue,
+      fuelCost,
+      tollCost,
+      maintenanceCost,
+      ureaCost,
+      extraCost,
+    });
+    const updatedProfit = metrics.netProfit;
+    const updatedReceived = metrics.receivedAmount;
+
+    try {
+      const response = await fetch(`/api/deliveries?id=${encodeURIComponent(deliveryId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dueAmount: newDue,
+          amountPaid: updatedReceived,
+          advancePaid: updatedReceived,
+          netProfit: updatedProfit,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.message || "Unable to update due amount.");
+
+      setDeliveries((prev) =>
+        prev.map((item) =>
+          (item._id || item.id) === deliveryId
+            ? {
+                ...item,
+                dueAmount: newDue,
+                net_profit: result.net_profit ?? result.netProfit ?? updatedProfit,
+                netProfit: result.net_profit ?? result.netProfit ?? updatedProfit,
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("Update due amount error:", error);
+      alert(error.message || "Unable to update due amount.");
+    }
+  };
 
   return (
     <div style={styles.container}>
@@ -307,7 +382,7 @@ export default function DailyDelivery() {
         <div>
           <h1 style={styles.title}>Daily Truck Delivery</h1>
           <p style={styles.subtitle}>
-            Record daily truck trips, return routes, and expenses.
+            Record daily truck trips, return routes, and operating expenses.
           </p>
         </div>
         <div style={styles.dateBox}>
@@ -325,7 +400,7 @@ export default function DailyDelivery() {
       {/* SUCCESS MESSAGE */}
       {saved && <div style={styles.successMessage}>Delivery record saved successfully.</div>}
 
-      {/* ================= FORM ================= */}
+      {/* FORM */}
       <form onSubmit={handleSubmit}>
         {/* 1. TRUCK INFO */}
         <div style={styles.card}>
@@ -368,9 +443,9 @@ export default function DailyDelivery() {
                   required
                 >
                   <option value="">Select Driver</option>
-                  {driverOptions.map((driverName) => (
-                    <option key={driverName} value={driverName}>
-                      {driverName}
+                  {driverOptions.map((driver) => (
+                    <option key={driver.name} value={driver.name}>
+                      {driver.name}
                     </option>
                   ))}
                 </select>
@@ -666,6 +741,47 @@ export default function DailyDelivery() {
               </div>
             </FormGroup>
 
+            <FormGroup label="Urea Cost">
+              <div style={styles.inputWithIcon}>
+                <IndianRupee size={15} color="#64748b" />
+                <input
+                  type="number"
+                  name="ureaCost"
+                  value={formData.ureaCost}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  min="0"
+                  style={styles.iconInput}
+                />
+              </div>
+            </FormGroup>
+
+            <FormGroup label="Extra Cost">
+              <div style={styles.inputWithIcon}>
+                <IndianRupee size={15} color="#64748b" />
+                <input
+                  type="number"
+                  name="extraCost"
+                  value={formData.extraCost}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  min="0"
+                  style={styles.iconInput}
+                />
+              </div>
+            </FormGroup>
+
+            <FormGroup label="Extra Cost Note" fullWidth>
+              <input
+                type="text"
+                name="extraCostNote"
+                value={formData.extraCostNote}
+                onChange={handleChange}
+                placeholder="e.g. Loading charges, extra labor, detention"
+                style={styles.input}
+              />
+            </FormGroup>
+
             <FormGroup label="Due Amount">
               <div style={styles.dueBox}>
                 <IndianRupee size={15} />
@@ -767,114 +883,115 @@ export default function DailyDelivery() {
                 </tr>
               </thead>
               <tbody>
-                {deliveries.map((delivery) => (
-                  <tr key={delivery._id} style={styles.tr}>
-                    <td style={styles.td}>
-                      {(delivery.goingDate || delivery.deliveryDate)
-                        ? new Date(delivery.goingDate || delivery.deliveryDate).toLocaleDateString("en-IN")
-                        : "-"}
-                    </td>
+                {deliveries.map((delivery) => {
+                  const id = delivery._id || delivery.id;
+                  const profit = delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0;
+                  return (
+                    <tr key={id} style={styles.tr}>
+                      <td style={styles.td}>
+                        {(delivery.goingDate || delivery.deliveryDate)
+                          ? new Date(delivery.goingDate || delivery.deliveryDate).toLocaleDateString("en-IN")
+                          : "-"}
+                      </td>
 
-                    <td style={styles.td}>
-                      <strong>{delivery.truckNumber || "-"}</strong>
-                    </td>
+                      <td style={styles.td}>
+                        <strong>{delivery.truckNumber || "-"}</strong>
+                      </td>
 
-                    <td style={styles.td}>{delivery.driverName || "-"}</td>
+                      <td style={styles.td}>{delivery.driverName || "-"}</td>
 
-                    <td style={styles.td}>
-                      <div style={styles.routeCell}>
-                        <span>{delivery.goingSource || delivery.source || "-"}</span>
-                        <span style={styles.routeArrow}>→</span>
-                        <strong>{delivery.goingDestination || delivery.destination || "-"}</strong>
-                      </div>
-                      {(delivery.comingDate || delivery.comingSource || delivery.comingDestination) && (
-                        <div style={{ ...styles.routeCell, color: "#64748b", fontSize: "11px" }}>
-                          <span>
-                            ↩ {delivery.comingDate
-                              ? new Date(delivery.comingDate).toLocaleDateString("en-IN")
-                              : delivery.comingSource || "Return"}
-                          </span>
+                      <td style={styles.td}>
+                        <div style={styles.routeCell}>
+                          <span>{delivery.goingSource || delivery.source || "-"}</span>
                           <span style={styles.routeArrow}>→</span>
-                          <span>{delivery.comingDestination || "-"}</span>
+                          <strong>{delivery.goingDestination || delivery.destination || "-"}</strong>
                         </div>
-                      )}
-                    </td>
+                        {(delivery.comingDate || delivery.comingSource || delivery.comingDestination) && (
+                          <div style={{ ...styles.routeCell, color: "#64748b", fontSize: "11px" }}>
+                            <span>
+                              ↩ {delivery.comingDate
+                                ? new Date(delivery.comingDate).toLocaleDateString("en-IN")
+                                : delivery.comingSource || "Return"}
+                            </span>
+                            <span style={styles.routeArrow}>→</span>
+                            <span>{delivery.comingDestination || "-"}</span>
+                          </div>
+                        )}
+                      </td>
 
-                    <td style={styles.td}>
-                      <div>Going: {delivery.going_material ? <strong>{delivery.going_material} </strong> : ""}({delivery.goingQuantity ?? delivery.quantity ?? "-"} {delivery.quantityUnit || "Ton"})</div>
-                      {(delivery.coming_material || delivery.comingQuantity) && (
-                        <div style={{ color: "#64748b", fontSize: "11px" }}>
-                          Coming: {delivery.coming_material ? <strong>{delivery.coming_material} </strong> : ""}({delivery.comingQuantity || "-"} {delivery.quantityUnit || "Ton"})
-                        </div>
-                      )}
-                    </td>
+                      <td style={styles.td}>
+                        <div>Going: {delivery.going_material ? <strong>{delivery.going_material} </strong> : ""}({delivery.goingQuantity ?? delivery.quantity ?? "-"} {delivery.quantityUnit || "Ton"})</div>
+                        {(delivery.coming_material || delivery.comingQuantity) && (
+                          <div style={{ color: "#64748b", fontSize: "11px" }}>
+                            Coming: {delivery.coming_material ? <strong>{delivery.coming_material} </strong> : ""}({delivery.comingQuantity || "-"} {delivery.quantityUnit || "Ton"})
+                          </div>
+                        )}
+                      </td>
 
-                    <td style={styles.td}>
-                      ₹ {Number(delivery.deliveryCost || 0).toLocaleString("en-IN")}
-                    </td>
+                      <td style={styles.td}>
+                        ₹ {Number(delivery.deliveryCost || 0).toLocaleString("en-IN")}
+                      </td>
 
-                    <td style={styles.td}>
-                      ₹ {Number(delivery.advancePaid ?? delivery.amountPaid ?? 0).toLocaleString("en-IN")}
-                    </td>
+                      <td style={styles.td}>
+                        ₹ {Number(delivery.advancePaid ?? delivery.amountPaid ?? 0).toLocaleString("en-IN")}
+                      </td>
 
-                    <td style={styles.td}>
-                      <span
-                        style={
-                          Number(delivery.dueAmount) > 0 ? styles.dueBadge : styles.paidBadge
-                        }
-                      >
-                        ₹ {Number(delivery.dueAmount || 0).toLocaleString("en-IN")}
-                      </span>
-                    </td>
+                      <td style={styles.td}>
+                        <span
+                          style={
+                            Number(delivery.dueAmount) > 0 ? styles.dueBadge : styles.paidBadge
+                          }
+                        >
+                          ₹ {Number(delivery.dueAmount || 0).toLocaleString("en-IN")}
+                        </span>
+                      </td>
 
-                    <td style={styles.td}>
-                      <strong
-                        style={{
-                          color:
-                            Number(delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0) >= 0
-                              ? "#15803d"
-                              : "#dc2626",
-                        }}
-                      >
-                        ₹ {Number(delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0).toLocaleString("en-IN")}
-                      </strong>
-                    </td>
+                      <td style={styles.td}>
+                        <strong
+                          style={{
+                            color: Number(profit) >= 0 ? "#15803d" : "#dc2626",
+                          }}
+                        >
+                          ₹ {Number(profit).toLocaleString("en-IN")}
+                        </strong>
+                      </td>
 
-                    <td style={styles.td}>
-                      <span
-                        style={{
-                          ...styles.statusBadge,
-                          ...(delivery.status === "Delivered"
-                            ? styles.delivered
-                            : delivery.status === "Cancelled"
-                            ? styles.cancelled
-                            : styles.inTransit),
-                        }}
-                      >
-                        {delivery.status}
-                      </span>
-                    </td>
+                      <td style={styles.td}>
+                        <span
+                          style={{
+                            ...styles.statusBadge,
+                            ...(delivery.status === "Delivered"
+                              ? styles.delivered
+                              : delivery.status === "Cancelled"
+                              ? styles.cancelled
+                              : styles.inTransit),
+                          }}
+                        >
+                          {delivery.status}
+                        </span>
+                      </td>
 
-                    <td style={styles.td}>
-                      <button
-                        type="button"
-                        onClick={() => handleEditDueAmount(delivery)}
-                        style={styles.editBtn}
-                        title="Update Due Balance"
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(delivery._id)}
-                        style={styles.deleteBtn}
-                        title="Delete Record"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td style={styles.td}>
+                        <button
+                          type="button"
+                          onClick={() => handleEditDueAmount(delivery)}
+                          style={styles.editBtn}
+                          title="Update Due Balance"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(id)}
+                          style={styles.deleteBtn}
+                          title="Delete Record"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

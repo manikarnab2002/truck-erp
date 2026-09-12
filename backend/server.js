@@ -129,6 +129,52 @@ app.post("/api/drivers", async (req, res) => {
   }
 });
 
+app.put("/api/drivers/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { name, phone, assignedTruck, status } = req.body;
+
+    if (!name?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Name is required.",
+      });
+    }
+
+    const currentDriver = await db.collection("drivers").findOne({ id });
+
+    if (!currentDriver) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver not found.",
+      });
+    }
+
+    const updatedDriver = {
+      ...currentDriver,
+      name: name.trim(),
+      phone: phone?.trim() || "",
+      assignedTruck: assignedTruck || "Unassigned",
+      status: status || "Available",
+      updatedAt: new Date(),
+    };
+
+    await db.collection("drivers").updateOne({ id }, { $set: updatedDriver });
+
+    res.status(200).json({
+      success: true,
+      message: "Driver updated successfully.",
+      data: updatedDriver,
+    });
+  } catch (error) {
+    console.error("Failed to update driver:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update driver.",
+    });
+  }
+});
+
 // ==========================================
 // DELETE DRIVER
 // ==========================================
@@ -239,6 +285,68 @@ app.post("/api/trucks", async (req, res) => {
   }
 });
 
+app.put("/api/trucks/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { regNo, chassisNo, model, type, driver, mileage, date, status } = req.body;
+
+    if (!regNo?.trim() || !model?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Registration number and model are required.",
+      });
+    }
+
+    const currentTruck = await db.collection("trucks").findOne({ id });
+
+    if (!currentTruck) {
+      return res.status(404).json({
+        success: false,
+        message: "Truck not found.",
+      });
+    }
+
+    const duplicateTruck = await db.collection("trucks").findOne({
+      regNo: regNo.trim(),
+      id: { $ne: id },
+    });
+
+    if (duplicateTruck) {
+      return res.status(409).json({
+        success: false,
+        message: "A truck with this registration number already exists.",
+      });
+    }
+
+    const updatedTruck = {
+      ...currentTruck,
+      regNo: regNo.trim(),
+      chassisNo: chassisNo?.trim() || "",
+      model: model.trim(),
+      type: type || "Open_Truck",
+      driver: driver?.trim() || "Unassigned",
+      mileage: mileage ? `${Number(mileage).toLocaleString()} km` : currentTruck.mileage || "0 km",
+      lastService: date || currentTruck.lastService || "",
+      status: status || currentTruck.status || "Active",
+      updatedAt: new Date(),
+    };
+
+    await db.collection("trucks").updateOne({ id }, { $set: updatedTruck });
+
+    res.status(200).json({
+      success: true,
+      message: "Truck updated successfully.",
+      data: updatedTruck,
+    });
+  } catch (error) {
+    console.error("Failed to update truck:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update truck.",
+    });
+  }
+});
+
 app.delete("/api/trucks/:id", async (req, res) => {
   try {
     const result = await db.collection("trucks").deleteOne({
@@ -345,6 +453,65 @@ app.post("/api/fuel", async (req, res) => {
   }
 });
 
+app.put("/api/fuel/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { truckNo, driver, liters, totalCost, odometer, mileage, date, station } = req.body;
+
+    const litersValue = Number(liters);
+    const totalCostValue = Number(totalCost);
+
+    if (
+      !truckNo?.trim() ||
+      !Number.isFinite(litersValue) ||
+      litersValue <= 0 ||
+      !Number.isFinite(totalCostValue) ||
+      totalCostValue < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Truck registration, liters, and a valid total cost are required.",
+      });
+    }
+
+    const currentLog = await db.collection("fuelLogs").findOne({ id });
+
+    if (!currentLog) {
+      return res.status(404).json({
+        success: false,
+        message: "Fuel log not found.",
+      });
+    }
+
+    const updatedFuelLog = {
+      ...currentLog,
+      truckNo: truckNo.trim(),
+      driver: driver?.trim() || "Unassigned",
+      liters: `${litersValue} L`,
+      totalCost: `₹${totalCostValue.toLocaleString("en-IN")}`,
+      odometer: odometer ? `${Number(odometer).toLocaleString()} km` : "N/A",
+      mileage: mileage || currentLog.mileage || "4.0 km/L",
+      date: date || currentLog.date || new Date().toISOString().split("T")[0],
+      station: station?.trim() || currentLog.station || "Local Station",
+      updatedAt: new Date(),
+    };
+
+    await db.collection("fuelLogs").updateOne({ id }, { $set: updatedFuelLog });
+
+    res.status(200).json({
+      success: true,
+      message: "Fuel log updated successfully.",
+      data: updatedFuelLog,
+    });
+  } catch (error) {
+    console.error("Failed to update fuel log:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update fuel log.",
+    });
+  }
+});
+
 app.delete("/api/fuel/:id", async (req, res) => {
   try {
     const result = await db.collection("fuelLogs").deleteOne({
@@ -420,6 +587,9 @@ app.post("/api/deliveries", async (req, res) => {
       fuelCost,
       tollCost,
       maintenanceCost,
+      ureaCost,
+      extraCost,
+      extraCostNote,
       status,
       maintenanceType,
       maintenanceDetails,
@@ -438,14 +608,21 @@ app.post("/api/deliveries", async (req, res) => {
     }
 
     const income = Number(deliveryCost || 0);
-    const paid = Number(advancePaid ?? amountPaid ?? 0);
+    const requestedAdvance = Number(advancePaid ?? amountPaid ?? 0);
+    const requestedDue = Number(req.body?.dueAmount ?? 0);
+    const paid = Number.isFinite(requestedAdvance) && requestedAdvance >= 0 ? requestedAdvance : 0;
     const fuel = Number(fuelCost || 0);
     const toll = Number(tollCost || 0);
     const maintenance = Number(maintenanceCost || 0);
+    const urea = Number(ureaCost || 0);
+    const extra = Number(extraCost || 0);
 
-    const totalExpense = fuel + toll + maintenance;
-    const dueAmount = Math.max(income - paid, 0);
-    const netProfit = income - totalExpense - dueAmount;
+    const totalExpense = fuel + toll + maintenance + urea + extra;
+    const dueAmount = Number.isFinite(requestedDue) && requestedDue >= 0
+      ? requestedDue
+      : Math.max(income - paid, 0);
+    const receivedAmount = Math.max(income - dueAmount, 0);
+    const netProfit = receivedAmount - totalExpense;
 
     const delivery = {
       deliveryDate: recordDate,
@@ -468,12 +645,15 @@ app.post("/api/deliveries", async (req, res) => {
       quantity: Number(goingQuantity ?? quantity ?? 0),
       quantityUnit: quantityUnit || "Ton",
       deliveryCost: income,
-      amountPaid: paid,
-      advancePaid: paid,
+      amountPaid: receivedAmount,
+      advancePaid: receivedAmount,
       dueAmount,
       fuelCost: fuel,
       tollCost: toll,
       maintenanceCost: maintenance,
+      ureaCost: urea,
+      extraCost: extra,
+      extraCostNote: extraCostNote || "",
       totalExpense,
       net_profit: netProfit,
       netIncome: netProfit,
@@ -507,12 +687,12 @@ app.post("/api/deliveries", async (req, res) => {
 app.patch("/api/deliveries", async (req, res) => {
   try {
     const id = req.query.id;
-    const dueAmount = Number(req.body?.dueAmount);
+    const incomingDueAmount = Number(req.body?.dueAmount);
 
     if (!id || !ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Valid delivery ID is required" });
     }
-    if (!Number.isFinite(dueAmount) || dueAmount < 0) {
+    if (!Number.isFinite(incomingDueAmount) || incomingDueAmount < 0) {
       return res.status(400).json({ success: false, message: "A valid due amount is required" });
     }
 
@@ -522,27 +702,30 @@ app.patch("/api/deliveries", async (req, res) => {
     }
 
     const deliveryCost = Number(delivery.deliveryCost || 0);
+    const requestedDueAmount = Number(req.body?.dueAmount ?? delivery.dueAmount ?? 0);
+    const dueAmount = Number.isFinite(requestedDueAmount) && requestedDueAmount >= 0 ? requestedDueAmount : Number(delivery.dueAmount || 0);
 
-    // Fallback in case totalExpense was not stored
     const totalExpense =
       delivery.totalExpense !== undefined
         ? Number(delivery.totalExpense)
         : Number(delivery.fuelCost || 0) +
           Number(delivery.tollCost || 0) +
-          Number(delivery.maintenanceCost || 0);
+          Number(delivery.maintenanceCost || 0) +
+          Number(delivery.ureaCost || 0) +
+          Number(delivery.extraCost || 0);
 
-    // Dynamic Net Profit & Total Amount Paid calculation
-    const netProfit = deliveryCost - totalExpense - dueAmount;
-    const updatedReceived = Math.max(deliveryCost - dueAmount, 0);
+    const receivedAmount = Math.max(deliveryCost - dueAmount, 0);
+    const netProfit = receivedAmount - totalExpense;
 
     const updateFields = {
       dueAmount,
       totalExpense,
+      receivedAmount,
       net_profit: netProfit,
       netProfit,
       netIncome: netProfit,
-      amountPaid: updatedReceived,
-      advancePaid: updatedReceived,
+      amountPaid: receivedAmount,
+      advancePaid: receivedAmount,
       updatedAt: new Date(),
     };
 
@@ -556,8 +739,8 @@ app.patch("/api/deliveries", async (req, res) => {
       dueAmount,
       net_profit: netProfit,
       netProfit,
-      amountPaid: updatedReceived,
-      advancePaid: updatedReceived,
+      amountPaid: receivedAmount,
+      advancePaid: receivedAmount,
     });
   } catch (error) {
     console.error("Failed to update due amount:", error);
@@ -599,16 +782,6 @@ app.delete("/api/deliveries", async (req, res) => {
 });
 
 // ==========================================
-// START SERVER
-// ==========================================
-connectDatabase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-});
-
-
-// ==========================================
 // STAFF PAYMENTS
 // ==========================================
 app.get("/api/staff-payments", async (req, res) => {
@@ -627,12 +800,12 @@ app.get("/api/staff-payments", async (req, res) => {
 
 app.post("/api/staff-payments", async (req, res) => {
   try {
-    const { date, staffType, staffName, paymentType, paymentMethod, amount, notes } = req.body;
+    const { date, truckRegNo, staffType, paymentType, amount, notes } = req.body;
 
-    if (!staffName || !staffType || !amount || Number(amount) <= 0) {
+    if (!truckRegNo?.trim() || !staffType || !amount || Number(amount) <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Staff name, type, and valid amount are required.",
+        message: "Truck registration number, staff type, and a valid amount are required.",
       });
     }
 
@@ -644,10 +817,9 @@ app.post("/api/staff-payments", async (req, res) => {
       date: paymentDate,
       month: `${year}-${month}`,
       year: year,
+      truckRegNo: truckRegNo.trim(),
       staffType,
-      staffName: staffName.trim(),
       paymentType: paymentType || "Salary",
-      paymentMethod: paymentMethod || "Cash",
       amount: Number(amount),
       notes: notes || "",
       createdAt: new Date(),
@@ -682,4 +854,13 @@ app.delete("/api/staff-payments", async (req, res) => {
     console.error(error);
     res.status(500).json({ success: false, message: "Failed to delete record." });
   }
+});
+
+// ==========================================
+// START SERVER
+// ==========================================
+connectDatabase().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 });

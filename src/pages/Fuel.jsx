@@ -18,6 +18,7 @@ export default function Fuel() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState(null);
 
   useEffect(() => {
     loadFuelLogs();
@@ -57,20 +58,33 @@ export default function Fuel() {
   };
 
   const handleAddFuelLog = async (newLog) => {
-    const response = await fetch('/api/fuel', {
-      method: 'POST',
+    const method = editingLog ? 'PUT' : 'POST';
+    const url = editingLog ? `/api/fuel/${encodeURIComponent(editingLog.id)}` : '/api/fuel';
+
+    const response = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newLog),
     });
     const result = await response.json();
 
     if (!response.ok) {
-      alert(result.message || 'Failed to add fuel log.');
+      alert(result.message || (editingLog ? 'Failed to update fuel log.' : 'Failed to add fuel log.'));
       return false;
     }
 
-    setFuelLogs((prev) => [result.data, ...prev]);
+    if (editingLog) {
+      setFuelLogs((prev) => prev.map((log) => (log.id === editingLog.id ? result.data : log)));
+      setEditingLog(null);
+    } else {
+      setFuelLogs((prev) => [result.data, ...prev]);
+    }
     return true;
+  };
+
+  const openEditLog = (log) => {
+    setEditingLog(log);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -128,9 +142,14 @@ export default function Fuel() {
 
       <AddFuelModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingLog(null);
+        }}
         onAddFuelLog={handleAddFuelLog}
         truckOptions={truckOptions}
+        initialData={editingLog}
+        mode={editingLog ? 'edit' : 'add'}
       />
 
 
@@ -174,12 +193,20 @@ export default function Fuel() {
                   <td style={styles.td}>{log.odometer || 'N/A'}</td>
                   <td style={styles.td}>{log.date}</td>
                   <td style={styles.td}>
-                    <button
-                      style={{ ...styles.actionBtn, color: '#ef4444', fontWeight: '600' }}
-                      onClick={() => handleDelete(log.id)}
-                    >
-                      Delete
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        style={{ ...styles.actionBtn, color: '#2563eb', fontWeight: '600' }}
+                        onClick={() => openEditLog(log)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        style={{ ...styles.actionBtn, color: '#ef4444', fontWeight: '600' }}
+                        onClick={() => handleDelete(log.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
