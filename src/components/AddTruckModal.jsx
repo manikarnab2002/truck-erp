@@ -148,6 +148,7 @@ export default function AddTruckModal({
             </div>
           </div>
 
+
           <div style={styles.footer}>
             <button type="button" style={styles.cancelBtn} onClick={handleClose}>
               Cancel

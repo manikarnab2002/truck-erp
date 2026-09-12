@@ -685,6 +685,7 @@ app.post("/api/deliveries", async (req, res) => {
 
 
 
+
 // UPDATE DUE AMOUNT AND RECALCULATE NET PROFIT
 app.patch("/api/deliveries", async (req, res) => {
   try {

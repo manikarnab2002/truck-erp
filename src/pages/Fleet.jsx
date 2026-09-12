@@ -150,6 +150,7 @@ export default function Fleet() {
         mode={editingTruck ? 'edit' : 'add'}
       />
 
+
       <div style={styles.filterCard}>
         <div style={styles.searchBox}>
           <Search size={16} color="#64748b" />
