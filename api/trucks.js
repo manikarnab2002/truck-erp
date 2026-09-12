@@ -111,7 +111,10 @@ export default async function handler(req, res) {
         });
       }
 
-      const currentTruck = await trucks.findOne({ id });
+      const truckFilter = ObjectId.isValid(id)
+        ? { $or: [{ id }, { _id: new ObjectId(id) }] }
+        : { id };
+      const currentTruck = await trucks.findOne(truckFilter);
 
       if (!currentTruck) {
         return res.status(404).json({
@@ -122,7 +125,8 @@ export default async function handler(req, res) {
 
       const duplicateTruck = await trucks.findOne({
         regNo: cleanRegNo,
-        id: { $ne: id },
+        _id: currentTruck._id ? { $ne: currentTruck._id } : undefined,
+        ...(currentTruck._id ? {} : { id: { $ne: id } }),
       });
 
       if (duplicateTruck) {
@@ -132,8 +136,9 @@ export default async function handler(req, res) {
         });
       }
 
+      const { _id, ...currentTruckFields } = currentTruck;
       const updatedTruck = {
-        ...currentTruck,
+        ...currentTruckFields,
         regNo: cleanRegNo,
         chassisNo: typeof chassisNo === "string" ? chassisNo.trim() : currentTruck.chassisNo || "",
         model: cleanModel,
@@ -142,7 +147,7 @@ export default async function handler(req, res) {
         updatedAt: new Date(),
       };
 
-      await trucks.updateOne({ id }, { $set: updatedTruck });
+      await trucks.updateOne(truckFilter, { $set: updatedTruck });
 
       return res.status(200).json({
         success: true,

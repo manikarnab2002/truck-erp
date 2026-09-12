@@ -3,6 +3,23 @@ import AddTruckModal from '../components/AddTruckModal';
 import { exportCsv } from '../utils/exportCsv';
 import { Search, Plus } from 'lucide-react';
 
+async function readApiResponse(response) {
+  const text = await response.text();
+
+  if (!text.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      message: `Server returned a non-JSON response (${response.status}).`,
+      raw: text.slice(0, 200),
+    };
+  }
+}
+
 const normalizeTruck = (truck, index = 0) => {
   if (!truck || typeof truck !== 'object') return null;
 
@@ -38,7 +55,7 @@ export default function Fleet() {
   const loadTrucks = async () => {
     try {
       const response = await fetch('/api/trucks');
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.message || 'Failed to load trucks.');
       setFleetList(
         Array.isArray(data)
@@ -56,7 +73,9 @@ export default function Fleet() {
   const handleAddTruck = async (newTruck) => {
     try {
       const method = editingTruck ? 'PUT' : 'POST';
-      const url = editingTruck ? `/api/trucks/${encodeURIComponent(editingTruck.id)}` : '/api/trucks';
+      const url = editingTruck
+        ? `/api/trucks?id=${encodeURIComponent(editingTruck.id)}`
+        : '/api/trucks';
 
       const response = await fetch(url, {
         method,
@@ -66,10 +85,10 @@ export default function Fleet() {
         body: JSON.stringify(newTruck),
       });
 
-      const result = await response.json();
+      const result = await readApiResponse(response);
 
       if (!response.ok) {
-        alert(result.message || (editingTruck ? 'Failed to update truck.' : 'Failed to add truck.'));
+        throw new Error(result.message || (editingTruck ? 'Failed to update truck.' : 'Failed to add truck.'));
         return false;
       }
 
@@ -93,7 +112,7 @@ export default function Fleet() {
       const response = await fetch(`/api/trucks?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.message || 'Failed to delete truck.');
       setFleetList((prev) => prev.filter((truck) => truck.id !== id));
     } catch (error) {
