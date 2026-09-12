@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import FormGroup from "../components/FormGroup";
 import { exportCsv } from "../utils/exportCsv";
+import { readApiResponse } from "../utils/apiResponse";
 import {
   UserCheck,
   IndianRupee,
@@ -37,7 +38,7 @@ export default function StaffPayment() {
   const loadTrucks = async () => {
     try {
       const response = await fetch("/api/trucks");
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (response.ok && Array.isArray(data)) {
         setTruckOptions(data.map((t) => (t.regNo || t.truckNo || t.registrationNumber || t.name)?.trim()).filter(Boolean));
       }
@@ -49,7 +50,7 @@ export default function StaffPayment() {
   const loadPayments = async () => {
     try {
       const response = await fetch("/api/staff-payments");
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.message || "Failed to load payments.");
       setPayments(Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []);
     } catch (error) {
@@ -78,7 +79,7 @@ export default function StaffPayment() {
         body: JSON.stringify(formData),
       });
 
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) {
         alert(result.message || "Unable to save staff payment.");
         return;
@@ -101,7 +102,7 @@ export default function StaffPayment() {
       const response = await fetch(`/api/staff-payments?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.message || "Unable to delete record.");
 
       setPayments((prev) => prev.filter((item) => (item._id || item.paymentId) !== id));

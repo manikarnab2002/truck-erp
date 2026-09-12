@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AddFuelModal from '../components/AddFuelModal';
 import { exportCsv } from '../utils/exportCsv';
+import { readApiResponse } from '../utils/apiResponse';
 import { 
   Fuel as FuelIcon, 
   Plus, 
@@ -28,7 +29,7 @@ export default function Fuel() {
   const loadTruckOptions = async () => {
     try {
       const response = await fetch('/api/trucks');
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.message || 'Failed to load trucks.');
 
       const options = Array.isArray(data)
@@ -46,7 +47,7 @@ export default function Fuel() {
   const loadFuelLogs = async () => {
     try {
       const response = await fetch('/api/fuel');
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.message || 'Failed to load fuel logs.');
       setFuelLogs(data);
     } catch (error) {
@@ -66,7 +67,7 @@ export default function Fuel() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newLog),
     });
-    const result = await response.json();
+    const result = await readApiResponse(response);
 
     if (!response.ok) {
       alert(result.message || (editingLog ? 'Failed to update fuel log.' : 'Failed to add fuel log.'));
@@ -92,7 +93,7 @@ export default function Fuel() {
       const response = await fetch(`/api/fuel?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.message || 'Failed to delete fuel log.');
       setFuelLogs((prev) => prev.filter((log) => log.id !== id));
     } catch (error) {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import FormGroup from "../components/FormGroup";
 import { exportCsv } from "../utils/exportCsv";
+import { readApiResponse } from "../utils/apiResponse";
 import {
   Truck,
   MapPin,
@@ -103,7 +104,7 @@ export default function DailyDelivery() {
   const loadTruckOptions = async () => {
     try {
       const response = await fetch("/api/trucks");
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.message || "Unable to load truck list.");
       const options = Array.isArray(data)
         ? data.map((truck) => (truck?.regNo || truck?.truckNo || truck?.name)?.trim()).filter(Boolean)
@@ -117,7 +118,7 @@ export default function DailyDelivery() {
   const loadDriverOptions = async () => {
     try {
       const response = await fetch("/api/drivers");
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.message || "Unable to load driver list.");
 
       const options = Array.isArray(data)
@@ -153,7 +154,7 @@ export default function DailyDelivery() {
   const loadDeliveries = async () => {
     try {
       const response = await fetch("/api/deliveries");
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.message || "Unable to load deliveries.");
       setDeliveries(Array.isArray(data) ? data : data.data || []);
     } catch (error) {
@@ -204,7 +205,7 @@ export default function DailyDelivery() {
         body: JSON.stringify(formData),
       });
 
-      const result = await response.json();
+      const result = await readApiResponse(response);
 
       if (!response.ok) {
         alert(result.message || "Unable to save delivery");
@@ -232,7 +233,7 @@ export default function DailyDelivery() {
       const response = await fetch(`/api/deliveries?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
 
       if (!response.ok) {
         throw new Error(result.message || "Unable to delete delivery.");
@@ -353,7 +354,7 @@ export default function DailyDelivery() {
           netProfit: updatedProfit,
         }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
 
       if (!response.ok) throw new Error(result.message || "Unable to update due amount.");
 

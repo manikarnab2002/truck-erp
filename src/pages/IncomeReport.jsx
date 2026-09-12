@@ -30,6 +30,7 @@ import {
 } from 'recharts';
 
 import { exportCsv } from '../utils/exportCsv';
+import { readApiResponse } from '../utils/apiResponse';
 
 const normalizeDeliveryRecord = (item) => {
   const amountPaid = Number(item.amountPaid ?? item.advancePaid ?? item.received ?? 0);
@@ -106,7 +107,7 @@ export default function IncomeReport() {
         ]);
 
         if (incomeRes.ok) {
-          const incomeData = await incomeRes.json();
+          const incomeData = await readApiResponse(incomeRes);
           const records = Array.isArray(incomeData?.records)
             ? incomeData.records
             : Array.isArray(incomeData)
@@ -116,7 +117,7 @@ export default function IncomeReport() {
         }
 
         if (staffRes.ok) {
-          const staffData = await staffRes.json();
+          const staffData = await readApiResponse(staffRes);
           const staffRecords = Array.isArray(staffData?.data)
             ? staffData.data
             : Array.isArray(staffData)

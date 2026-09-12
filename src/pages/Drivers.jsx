@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AddDriverModal from "../components/AddDriverModal";
 import { exportCsv } from "../utils/exportCsv";
+import { readApiResponse } from "../utils/apiResponse";
 
 import {
   Plus,
@@ -56,7 +57,7 @@ export default function Drivers() {
   const loadTruckOptions = async () => {
     try {
       const response = await fetch("/api/trucks");
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.message || "Unable to load truck list.");
@@ -88,7 +89,7 @@ export default function Drivers() {
       const response = await fetch("/api/drivers")
 
       const data =
-        await response.json();
+        await readApiResponse(response);
 
 
       if (!response.ok) {
@@ -153,7 +154,7 @@ export default function Drivers() {
 
 
         const result =
-          await response.json();
+          await readApiResponse(response);
 
 
         if (!response.ok) {
@@ -247,7 +248,7 @@ export default function Drivers() {
 
 
         const result =
-          await response.json();
+          await readApiResponse(response);
 
 
         if (!response.ok) {

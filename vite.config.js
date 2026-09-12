@@ -24,7 +24,18 @@ async function readBody(req) {
   }
 
   const rawBody = Buffer.concat(chunks).toString('utf8')
-  return rawBody ? JSON.parse(rawBody) : {}
+
+  if (!rawBody.trim()) {
+    return {}
+  }
+
+  try {
+    return JSON.parse(rawBody)
+  } catch {
+    const error = new Error('Request body must contain valid JSON.')
+    error.statusCode = 400
+    throw error
+  }
 }
 
 function apiMiddleware() {
@@ -66,7 +77,7 @@ function apiMiddleware() {
         } catch (error) {
           console.error(`API ${req.method} ${requestUrl.pathname} failed:`, error)
           if (!res.headersSent) {
-            res.statusCode = 500
+            res.statusCode = error.statusCode || 500
             res.setHeader('Content-Type', 'application/json')
             res.end(JSON.stringify({
               success: false,

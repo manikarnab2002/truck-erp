@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, Users, Fuel, CheckCircle2 } from 'lucide-react';
+import { readApiResponse } from '../utils/apiResponse';
 import {
   BarChart,
   Bar,
@@ -76,10 +77,10 @@ export default function Dashboard() {
         ]);
 
         const [trucks, drivers, fuelLogs, deliveries] = await Promise.all([
-          trucksRes.json(),
-          driversRes.json(),
-          fuelRes.json(),
-          deliveriesRes.json(),
+          readApiResponse(trucksRes),
+          readApiResponse(driversRes),
+          readApiResponse(fuelRes),
+          readApiResponse(deliveriesRes),
         ]);
 
         setStats({
