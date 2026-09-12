@@ -38,6 +38,7 @@ export default async function handler(req, res) {
         date,
       } = payload;
 
+      
       const cleanRegNo = typeof regNo === "string" ? regNo.trim() : "";
       const cleanModel = typeof model === "string" ? model.trim() : "";
       const cleanChassisNo =

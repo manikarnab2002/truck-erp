@@ -171,6 +171,7 @@ export default async function handler(req, res) {
 
     if (req.method === "PUT") {
 
+      
       const id = req.params?.id || req.query?.id;
       const payload = req.body || {};
       const {

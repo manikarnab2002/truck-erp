@@ -35,6 +35,7 @@ export default async function handler(req, res) {
         });
       }
 
+      
       const paymentDate = date || new Date().toISOString().split("T")[0];
       const [year, month] = paymentDate.split("-");
 

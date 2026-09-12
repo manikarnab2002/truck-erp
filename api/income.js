@@ -161,6 +161,7 @@ export default async function handler(req, res) {
         maintenance -
         driverSalary;
 
+        
 
       totalQuantity +=
         Number(

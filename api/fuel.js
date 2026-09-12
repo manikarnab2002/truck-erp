@@ -50,6 +50,7 @@ export default async function handler(req, res) {
       });
     }
 
+    
     if (req.method === "PUT") {
       const id = req.params?.id || req.query?.id;
       const { truckNo, driver, liters, totalCost, odometer, mileage, date, station } = req.body || {};
