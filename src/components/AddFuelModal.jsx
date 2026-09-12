@@ -72,6 +72,7 @@ export default function AddFuelModal({
       alert('Unable to save fuel log.');
     }
   };
+  
 
   const handleClose = () => {
     setFormData(initialFormState);
