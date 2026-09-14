@@ -14,6 +14,8 @@ import {
   Pencil,
   Trash2,
   TrendingUp,
+  Eye,
+  X,
 } from "lucide-react";
 
 const emptyForm = {
@@ -47,6 +49,8 @@ const emptyForm = {
   tollCost: "",
   maintenanceCost: "",
   ureaCost: "",
+  driverCharge: "",
+  commission: "",
   extraCost: "",
   extraCostNote: "",
   maintenanceType: "",
@@ -65,16 +69,22 @@ const calculateDeliveryMetrics = ({
   maintenanceCost = 0,
   ureaCost = 0,
   extraCost = 0,
+  driverCharge = 0,
+  commission = 0,
 }) => {
   const numericDeliveryCost = Number(deliveryCost || 0);
   const numericAdvancePaid = Number(advancePaid || 0);
-  const numericDueAmount = Number(dueAmount ?? Math.max(numericDeliveryCost - numericAdvancePaid, 0));
+  const numericDueAmount = Number(
+    dueAmount ?? Math.max(numericDeliveryCost - numericAdvancePaid, 0)
+  );
   const totalExpense =
     Number(fuelCost || 0) +
     Number(tollCost || 0) +
     Number(maintenanceCost || 0) +
     Number(ureaCost || 0) +
-    Number(extraCost || 0);
+    Number(extraCost || 0) +
+    Number(driverCharge || 0) +
+    Number(commission || 0);
 
   const receivedAmount = Math.max(numericDeliveryCost - numericDueAmount, 0);
   const netProfit = receivedAmount - totalExpense;
@@ -94,12 +104,28 @@ export default function DailyDelivery() {
   const [driverOptions, setDriverOptions] = useState([]);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedDelivery, setSelectedDelivery] = useState(null);
 
   useEffect(() => {
     loadDeliveries();
     loadTruckOptions();
     loadDriverOptions();
   }, []);
+
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setSelectedDelivery(null);
+      }
+    };
+    if (selectedDelivery) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedDelivery]);
 
   const loadTruckOptions = async () => {
     try {
@@ -177,6 +203,8 @@ export default function DailyDelivery() {
       const maintenanceCost = Number(name === "maintenanceCost" ? value : prev.maintenanceCost) || 0;
       const ureaCost = Number(name === "ureaCost" ? value : prev.ureaCost) || 0;
       const extraCost = Number(name === "extraCost" ? value : prev.extraCost) || 0;
+      const driverCharge = Number(name === "driverCharge" ? value : prev.driverCharge) || 0;
+      const commission = Number(name === "commission" ? value : prev.commission) || 0;
 
       const metrics = calculateDeliveryMetrics({
         deliveryCost,
@@ -186,6 +214,8 @@ export default function DailyDelivery() {
         maintenanceCost,
         ureaCost,
         extraCost,
+        driverCharge,
+        commission,
       });
 
       updated.dueAmount = metrics.dueAmount.toString();
@@ -240,6 +270,9 @@ export default function DailyDelivery() {
       }
 
       setDeliveries((prev) => prev.filter((delivery) => (delivery._id || delivery.id) !== id));
+      if (selectedDelivery && (selectedDelivery._id || selectedDelivery.id) === id) {
+        setSelectedDelivery(null);
+      }
     } catch (error) {
       console.error("Delete delivery error:", error);
       alert(error.message || "Unable to delete delivery.");
@@ -272,6 +305,8 @@ export default function DailyDelivery() {
       "Toll Cost",
       "Maintenance Cost",
       "Urea Cost",
+      "Driver Charge",
+      "Commission",
       "Extra Cost",
       "Extra Cost Note",
       "Net Profit",
@@ -299,6 +334,8 @@ export default function DailyDelivery() {
       delivery.tollCost || 0,
       delivery.maintenanceCost || 0,
       delivery.ureaCost || 0,
+      delivery.driverCharge || 0,
+      delivery.commission || 0,
       delivery.extraCost || 0,
       delivery.extraCostNote || "",
       delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0,
@@ -330,6 +367,8 @@ export default function DailyDelivery() {
     const maintenanceCost = Number(delivery.maintenanceCost || 0);
     const ureaCost = Number(delivery.ureaCost || 0);
     const extraCost = Number(delivery.extraCost || 0);
+    const driverCharge = Number(delivery.driverCharge || 0);
+    const commission = Number(delivery.commission || 0);
 
     const metrics = calculateDeliveryMetrics({
       deliveryCost,
@@ -339,6 +378,8 @@ export default function DailyDelivery() {
       maintenanceCost,
       ureaCost,
       extraCost,
+      driverCharge,
+      commission,
     });
     const updatedProfit = metrics.netProfit;
     const updatedReceived = metrics.receivedAmount;
@@ -370,6 +411,15 @@ export default function DailyDelivery() {
             : item
         )
       );
+
+      if (selectedDelivery && (selectedDelivery._id || selectedDelivery.id) === deliveryId) {
+        setSelectedDelivery((prev) => ({
+          ...prev,
+          dueAmount: newDue,
+          net_profit: result.net_profit ?? result.netProfit ?? updatedProfit,
+          netProfit: result.net_profit ?? result.netProfit ?? updatedProfit,
+        }));
+      }
     } catch (error) {
       console.error("Update due amount error:", error);
       alert(error.message || "Unable to update due amount.");
@@ -383,7 +433,7 @@ export default function DailyDelivery() {
         <div>
           <h1 style={styles.title}>Daily Truck Delivery</h1>
           <p style={styles.subtitle}>
-            Record daily truck trips, return routes, and operating expenses.
+            Record daily truck trips, return routes, driver charges, commissions, and operating expenses.
           </p>
         </div>
         <div style={styles.dateBox}>
@@ -644,7 +694,7 @@ export default function DailyDelivery() {
             <div>
               <h2 style={styles.cardTitle}>Financial Details</h2>
               <p style={styles.cardSubtitle}>
-                Trip charges, advance, operating expenses, due amount, and net profit.
+                Trip charges, advance, operating expenses, driver charge, commission, due amount, and net profit.
               </p>
             </div>
           </div>
@@ -757,6 +807,37 @@ export default function DailyDelivery() {
               </div>
             </FormGroup>
 
+            {/* DYNAMIC FINANCIALS: DRIVER CHARGE & COMMISSION */}
+            <FormGroup label="Driver Charge">
+              <div style={styles.inputWithIcon}>
+                <IndianRupee size={15} color="#64748b" />
+                <input
+                  type="number"
+                  name="driverCharge"
+                  value={formData.driverCharge}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  min="0"
+                  style={styles.iconInput}
+                />
+              </div>
+            </FormGroup>
+
+            <FormGroup label="Commission">
+              <div style={styles.inputWithIcon}>
+                <IndianRupee size={15} color="#64748b" />
+                <input
+                  type="number"
+                  name="commission"
+                  value={formData.commission}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  min="0"
+                  style={styles.iconInput}
+                />
+              </div>
+            </FormGroup>
+
             <FormGroup label="Extra Cost">
               <div style={styles.inputWithIcon}>
                 <IndianRupee size={15} color="#64748b" />
@@ -772,13 +853,13 @@ export default function DailyDelivery() {
               </div>
             </FormGroup>
 
-            <FormGroup label="Extra Cost Note" fullWidth>
+            <FormGroup label="Extra Cost Note">
               <input
                 type="text"
                 name="extraCostNote"
                 value={formData.extraCostNote}
                 onChange={handleChange}
-                placeholder="e.g. Loading charges, extra labor, detention"
+                placeholder="e.g. Loading charges, detention"
                 style={styles.input}
               />
             </FormGroup>
@@ -880,7 +961,7 @@ export default function DailyDelivery() {
                   <th style={styles.th}>Due</th>
                   <th style={styles.th}>Net Profit</th>
                   <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Action</th>
+                  <th style={styles.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -973,22 +1054,32 @@ export default function DailyDelivery() {
                       </td>
 
                       <td style={styles.td}>
-                        <button
-                          type="button"
-                          onClick={() => handleEditDueAmount(delivery)}
-                          style={styles.editBtn}
-                          title="Update Due Balance"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(id)}
-                          style={styles.deleteBtn}
-                          title="Delete Record"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div style={styles.actionGroup}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDelivery(delivery)}
+                            style={styles.viewBtn}
+                            title="View Delivery Details"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEditDueAmount(delivery)}
+                            style={styles.editBtn}
+                            title="Update Due Balance"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(id)}
+                            style={styles.deleteBtn}
+                            title="Delete Record"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -998,6 +1089,331 @@ export default function DailyDelivery() {
           </div>
         )}
       </div>
+
+      {/* VIEW DETAILS POPUP / MODAL */}
+      {selectedDelivery && (
+        <div style={styles.modalOverlay} onClick={() => setSelectedDelivery(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            {/* MODAL HEADER */}
+            <div style={styles.modalHeader}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={styles.modalHeaderIcon}>
+                  <Truck size={18} />
+                </div>
+                <div>
+                  <h3 style={styles.modalTitle}>Delivery Details</h3>
+                  <p style={styles.modalSubtitle}>
+                    {selectedDelivery.truckNumber || "Truck"} •{" "}
+                    {(selectedDelivery.goingDate || selectedDelivery.deliveryDate)
+                      ? new Date(selectedDelivery.goingDate || selectedDelivery.deliveryDate).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })
+                      : "Date N/A"}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span
+                  style={{
+                    ...styles.statusBadge,
+                    ...(selectedDelivery.status === "Delivered"
+                      ? styles.delivered
+                      : selectedDelivery.status === "Cancelled"
+                      ? styles.cancelled
+                      : styles.inTransit),
+                  }}
+                >
+                  {selectedDelivery.status || "In Transit"}
+                </span>
+                <button
+                  type="button"
+                  style={styles.modalCloseBtn}
+                  onClick={() => setSelectedDelivery(null)}
+                  title="Close modal"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* MODAL BODY */}
+            <div style={styles.modalBody}>
+              {/* SECTION 1: TRIP & DRIVER */}
+              <div style={styles.modalSection}>
+                <div style={styles.modalSectionHeader}>
+                  <Truck size={15} color="#2563eb" />
+                  <span>Vehicle & Driver Information</span>
+                </div>
+                <div style={styles.modalGrid}>
+                  <div style={styles.detailCard}>
+                    <span style={styles.detailLabel}>Truck Reg No</span>
+                    <strong style={styles.detailValue}>{selectedDelivery.truckNumber || "-"}</strong>
+                  </div>
+                  <div style={styles.detailCard}>
+                    <span style={styles.detailLabel}>Driver Name</span>
+                    <strong style={styles.detailValue}>{selectedDelivery.driverName || "-"}</strong>
+                  </div>
+                  <div style={styles.detailCard}>
+                    <span style={styles.detailLabel}>Cargo Unit</span>
+                    <strong style={styles.detailValue}>{selectedDelivery.quantityUnit || "Ton"}</strong>
+                  </div>
+                  <div style={styles.detailCard}>
+                    <span style={styles.detailLabel}>Record ID</span>
+                    <strong style={{ ...styles.detailValue, fontSize: "11px", color: "#64748b" }}>
+                      {String(selectedDelivery._id || selectedDelivery.id || "N/A").slice(-8)}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: ROUTE BREAKDOWN */}
+              <div style={styles.modalSection}>
+                <div style={styles.modalSectionHeader}>
+                  <MapPin size={15} color="#2563eb" />
+                  <span>Trip Routes & Cargo Details</span>
+                </div>
+                <div style={styles.routeGrid}>
+                  {/* GOING TRIP */}
+                  <div style={styles.routeCard}>
+                    <div style={styles.routeBadge}>Outbound (Going Trip)</div>
+                    <div style={styles.detailRow}>
+                      <span>Date:</span>
+                      <strong>
+                        {(selectedDelivery.goingDate || selectedDelivery.deliveryDate)
+                          ? new Date(selectedDelivery.goingDate || selectedDelivery.deliveryDate).toLocaleDateString("en-IN")
+                          : "-"}
+                      </strong>
+                    </div>
+                    <div style={styles.detailRow}>
+                      <span>Source:</span>
+                      <strong>{selectedDelivery.goingSource || selectedDelivery.source || "-"}</strong>
+                    </div>
+                    <div style={styles.detailRow}>
+                      <span>Destination:</span>
+                      <strong>{selectedDelivery.goingDestination || selectedDelivery.destination || "-"}</strong>
+                    </div>
+                    <div style={styles.detailRow}>
+                      <span>Material:</span>
+                      <strong>{selectedDelivery.going_material || selectedDelivery.material || "-"}</strong>
+                    </div>
+                    <div style={styles.detailRow}>
+                      <span>Quantity:</span>
+                      <strong>
+                        {selectedDelivery.goingQuantity ?? selectedDelivery.quantity ?? "-"} {selectedDelivery.quantityUnit || "Ton"}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* COMING TRIP */}
+                  <div style={styles.routeCard}>
+                    <div style={{ ...styles.routeBadge, backgroundColor: "#f1f5f9", color: "#475569" }}>
+                      Return (Coming Trip)
+                    </div>
+                    {selectedDelivery.comingDate || selectedDelivery.comingSource || selectedDelivery.comingDestination ? (
+                      <>
+                        <div style={styles.detailRow}>
+                          <span>Date:</span>
+                          <strong>
+                            {selectedDelivery.comingDate
+                              ? new Date(selectedDelivery.comingDate).toLocaleDateString("en-IN")
+                              : "-"}
+                          </strong>
+                        </div>
+                        <div style={styles.detailRow}>
+                          <span>Source:</span>
+                          <strong>{selectedDelivery.comingSource || "-"}</strong>
+                        </div>
+                        <div style={styles.detailRow}>
+                          <span>Destination:</span>
+                          <strong>{selectedDelivery.comingDestination || "-"}</strong>
+                        </div>
+                        <div style={styles.detailRow}>
+                          <span>Material:</span>
+                          <strong>{selectedDelivery.coming_material || "-"}</strong>
+                        </div>
+                        <div style={styles.detailRow}>
+                          <span>Quantity:</span>
+                          <strong>
+                            {selectedDelivery.comingQuantity || "-"} {selectedDelivery.quantityUnit || "Ton"}
+                          </strong>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={styles.noReturnText}>No return route or cargo recorded for this trip.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: FINANCIALS & EXPENSES */}
+              <div style={styles.modalSection}>
+                <div style={styles.modalSectionHeader}>
+                  <IndianRupee size={15} color="#2563eb" />
+                  <span>Financial Statement & Operating Expenses</span>
+                </div>
+
+                {/* Revenue Overview */}
+                <div style={styles.financialSummaryGrid}>
+                  <div style={styles.finSummaryCard}>
+                    <span style={styles.finLabel}>Delivery Cost (Gross)</span>
+                    <span style={styles.finAmount}>
+                      ₹ {Number(selectedDelivery.deliveryCost || 0).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div style={styles.finSummaryCard}>
+                    <span style={styles.finLabel}>Advance Received</span>
+                    <span style={{ ...styles.finAmount, color: "#15803d" }}>
+                      ₹ {Number(selectedDelivery.advancePaid ?? selectedDelivery.amountPaid ?? 0).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div style={styles.finSummaryCard}>
+                    <span style={styles.finLabel}>Due Amount</span>
+                    <span
+                      style={{
+                        ...styles.finAmount,
+                        color: Number(selectedDelivery.dueAmount) > 0 ? "#c2410c" : "#15803d",
+                      }}
+                    >
+                      ₹ {Number(selectedDelivery.dueAmount || 0).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Expense List */}
+                <div style={styles.expenseTableWrapper}>
+                  <div style={styles.expenseTableHeader}>Itemized Trip Expenses</div>
+                  <div style={styles.expenseGrid}>
+                    <div style={styles.expenseItem}>
+                      <span style={styles.expenseName}>Fuel Cost</span>
+                      <strong style={styles.expenseVal}>
+                        ₹ {Number(selectedDelivery.fuelCost || 0).toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                    <div style={styles.expenseItem}>
+                      <span style={styles.expenseName}>Toll Cost</span>
+                      <strong style={styles.expenseVal}>
+                        ₹ {Number(selectedDelivery.tollCost || 0).toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                    <div style={styles.expenseItem}>
+                      <span style={styles.expenseName}>
+                        Maintenance Cost {selectedDelivery.maintenanceType ? `(${selectedDelivery.maintenanceType})` : ""}
+                      </span>
+                      <strong style={styles.expenseVal}>
+                        ₹ {Number(selectedDelivery.maintenanceCost || 0).toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                    <div style={styles.expenseItem}>
+                      <span style={styles.expenseName}>Urea Cost</span>
+                      <strong style={styles.expenseVal}>
+                        ₹ {Number(selectedDelivery.ureaCost || 0).toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                    <div style={styles.expenseItem}>
+                      <span style={styles.expenseName}>Driver Charge</span>
+                      <strong style={styles.expenseVal}>
+                        ₹ {Number(selectedDelivery.driverCharge || 0).toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                    <div style={styles.expenseItem}>
+                      <span style={styles.expenseName}>Commission</span>
+                      <strong style={styles.expenseVal}>
+                        ₹ {Number(selectedDelivery.commission || 0).toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                    <div style={styles.expenseItem}>
+                      <span style={styles.expenseName}>
+                        Extra Cost {selectedDelivery.extraCostNote ? `(${selectedDelivery.extraCostNote})` : ""}
+                      </span>
+                      <strong style={styles.expenseVal}>
+                        ₹ {Number(selectedDelivery.extraCost || 0).toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                    <div style={{ ...styles.expenseItem, backgroundColor: "#f8fafc" }}>
+                      <span style={{ ...styles.expenseName, color: "#0f172a", fontWeight: "700" }}>Total Expenses</span>
+                      <strong style={{ ...styles.expenseVal, color: "#c2410c", fontSize: "13px" }}>
+                        ₹ {Number(
+                          selectedDelivery.totalExpense ??
+                            (Number(selectedDelivery.fuelCost || 0) +
+                              Number(selectedDelivery.tollCost || 0) +
+                              Number(selectedDelivery.maintenanceCost || 0) +
+                              Number(selectedDelivery.ureaCost || 0) +
+                              Number(selectedDelivery.extraCost || 0) +
+                              Number(selectedDelivery.driverCharge || 0) +
+                              Number(selectedDelivery.commission || 0))
+                        ).toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Net Profit Card */}
+                {(() => {
+                  const modalProfit = selectedDelivery.net_profit ?? selectedDelivery.netProfit ?? selectedDelivery.netIncome ?? 0;
+                  const isPositive = Number(modalProfit) >= 0;
+                  return (
+                    <div
+                      style={{
+                        ...styles.netProfitCard,
+                        backgroundColor: isPositive ? "#f0fdf4" : "#fef2f2",
+                        borderColor: isPositive ? "#bbf7d0" : "#fecaca",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <TrendingUp size={20} color={isPositive ? "#15803d" : "#dc2626"} />
+                        <div>
+                          <div style={{ fontSize: "11px", textTransform: "uppercase", fontWeight: "700", color: "#64748b" }}>
+                            Net Operating Profit (Delivery Cost - Total Expenses - Due)
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "20px",
+                              fontWeight: "800",
+                              color: isPositive ? "#15803d" : "#dc2626",
+                            }}
+                          >
+                            ₹ {Number(modalProfit).toLocaleString("en-IN")}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* SECTION 4: NOTES */}
+              <div style={styles.modalSection}>
+                <div style={styles.modalSectionHeader}>
+                  <FileText size={15} color="#2563eb" />
+                  <span>Additional Notes & Remarks</span>
+                </div>
+                <div style={styles.notesBox}>
+                  {selectedDelivery.notes ? (
+                    selectedDelivery.notes
+                  ) : (
+                    <span style={{ color: "#94a3b8", fontStyle: "italic" }}>
+                      No additional notes provided for this delivery record.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* MODAL FOOTER */}
+            <div style={styles.modalFooter}>
+              <button
+                type="button"
+                style={styles.modalCloseFooterBtn}
+                onClick={() => setSelectedDelivery(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1346,6 +1762,37 @@ const styles = {
     backgroundColor: "#fee2e2",
     color: "#b91c1c",
   },
+  actionGroup: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  viewBtn: {
+    width: "30px",
+    height: "30px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid #cbd5e1",
+    backgroundColor: "#f8fafc",
+    color: "#334155",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.15s ease-in-out",
+  },
+  editBtn: {
+    width: "30px",
+    height: "30px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid #bfdbfe",
+    backgroundColor: "#eff6ff",
+    color: "#2563eb",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.15s ease-in-out",
+  },
   deleteBtn: {
     display: "flex",
     alignItems: "center",
@@ -1355,21 +1802,9 @@ const styles = {
     border: "1px solid #fecaca",
     backgroundColor: "#fef2f2",
     color: "#dc2626",
-    borderRadius: "5px",
-    cursor: "pointer",
-  },
-  editBtn: {
-    width: "30px",
-    height: "30px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: "6px",
-    border: "1px solid #bfdbfe",
-    backgroundColor: "#eff6ff",
-    color: "#2563eb",
     borderRadius: "6px",
     cursor: "pointer",
+    transition: "all 0.15s ease-in-out",
   },
   emptyState: {
     minHeight: "220px",
@@ -1378,5 +1813,245 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     textAlign: "center",
+  },
+
+  /* MODAL STYLES */
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    backdropFilter: "blur(4px)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+    padding: "20px",
+  },
+  modalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    width: "100%",
+    maxWidth: "700px",
+    maxHeight: "90vh",
+    display: "flex",
+    flexDirection: "column",
+    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+    overflow: "hidden",
+  },
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "16px 20px",
+    borderBottom: "1px solid #e2e8f0",
+    backgroundColor: "#f8fafc",
+  },
+  modalHeaderIcon: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "8px",
+    backgroundColor: "#eff6ff",
+    color: "#2563eb",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalTitle: {
+    fontSize: "16px",
+    fontWeight: "700",
+    color: "#0f172a",
+    margin: 0,
+  },
+  modalSubtitle: {
+    fontSize: "12px",
+    color: "#64748b",
+    margin: "2px 0 0",
+  },
+  modalCloseBtn: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#64748b",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "6px",
+    borderRadius: "6px",
+  },
+  modalBody: {
+    padding: "20px",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+  },
+  modalSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  modalSectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  modalGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: "10px",
+  },
+  detailCard: {
+    padding: "10px 12px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "7px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "3px",
+  },
+  detailLabel: {
+    fontSize: "11px",
+    color: "#64748b",
+    textTransform: "uppercase",
+    fontWeight: "600",
+  },
+  detailValue: {
+    fontSize: "13px",
+    color: "#0f172a",
+    fontWeight: "700",
+  },
+  routeGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "12px",
+  },
+  routeCard: {
+    padding: "12px 14px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    backgroundColor: "#ffffff",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  routeBadge: {
+    display: "inline-block",
+    alignSelf: "flex-start",
+    padding: "3px 8px",
+    borderRadius: "4px",
+    backgroundColor: "#eff6ff",
+    color: "#1d4ed8",
+    fontSize: "11px",
+    fontWeight: "700",
+  },
+  detailRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontSize: "12px",
+    borderBottom: "1px dashed #f1f5f9",
+    paddingBottom: "4px",
+    color: "#475569",
+  },
+  noReturnText: {
+    fontSize: "12px",
+    color: "#94a3b8",
+    fontStyle: "italic",
+    padding: "12px 0",
+    textAlign: "center",
+  },
+  financialSummaryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "10px",
+  },
+  finSummaryCard: {
+    padding: "10px 12px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "7px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  finLabel: {
+    fontSize: "11px",
+    color: "#64748b",
+    fontWeight: "600",
+  },
+  finAmount: {
+    fontSize: "15px",
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  expenseTableWrapper: {
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    overflow: "hidden",
+  },
+  expenseTableHeader: {
+    padding: "8px 12px",
+    backgroundColor: "#f8fafc",
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "#475569",
+    borderBottom: "1px solid #e2e8f0",
+  },
+  expenseGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  },
+  expenseItem: {
+    padding: "8px 12px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontSize: "12px",
+    borderBottom: "1px solid #f1f5f9",
+    borderRight: "1px solid #f1f5f9",
+  },
+  expenseName: {
+    color: "#64748b",
+  },
+  expenseVal: {
+    color: "#1e293b",
+    fontWeight: "600",
+  },
+  netProfitCard: {
+    padding: "14px 16px",
+    borderRadius: "8px",
+    border: "1px solid",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  notesBox: {
+    padding: "10px 12px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "6px",
+    fontSize: "12px",
+    color: "#334155",
+    lineHeight: "1.5",
+  },
+  modalFooter: {
+    display: "flex",
+    justifyContent: "flex-end",
+    padding: "12px 20px",
+    borderTop: "1px solid #e2e8f0",
+    backgroundColor: "#f8fafc",
+  },
+  modalCloseFooterBtn: {
+    padding: "8px 18px",
+    backgroundColor: "#1e293b",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
   },
 };

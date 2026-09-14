@@ -590,6 +590,8 @@ app.post("/api/deliveries", async (req, res) => {
       ureaCost,
       extraCost,
       extraCostNote,
+      driverCharge,
+      commission,
       status,
       maintenanceType,
       maintenanceDetails,
@@ -616,8 +618,10 @@ app.post("/api/deliveries", async (req, res) => {
     const maintenance = Number(maintenanceCost || 0);
     const urea = Number(ureaCost || 0);
     const extra = Number(extraCost || 0);
+    const driverExpense = Number(driverCharge || 0);
+    const commExpense = Number(commission || 0);
 
-    const totalExpense = fuel + toll + maintenance + urea + extra;
+    const totalExpense = fuel + toll + maintenance + urea + extra + driverExpense + commExpense;
     const dueAmount = Number.isFinite(requestedDue) && requestedDue >= 0
       ? requestedDue
       : Math.max(income - paid, 0);
@@ -654,6 +658,8 @@ app.post("/api/deliveries", async (req, res) => {
       ureaCost: urea,
       extraCost: extra,
       extraCostNote: extraCostNote || "",
+      driverCharge: driverExpense,
+      commission: commExpense,
       totalExpense,
       net_profit: netProfit,
       netIncome: netProfit,
@@ -715,7 +721,9 @@ app.patch("/api/deliveries", async (req, res) => {
           Number(delivery.tollCost || 0) +
           Number(delivery.maintenanceCost || 0) +
           Number(delivery.ureaCost || 0) +
-          Number(delivery.extraCost || 0);
+          Number(delivery.extraCost || 0) +
+          Number(delivery.driverCharge || 0) +
+          Number(delivery.commission || 0);
 
     const receivedAmount = Math.max(deliveryCost - dueAmount, 0);
     const netProfit = receivedAmount - totalExpense;

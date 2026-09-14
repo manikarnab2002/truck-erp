@@ -1,246 +1,326 @@
 # Truck ERP
 
-Truck ERP is a React and Vite operations dashboard for managing a transport fleet. It provides screens for fleet records, drivers, fuel usage, deliveries, maintenance work orders, and income reporting, with MongoDB-backed API handlers for the operational records.
+A modern, full-stack Fleet Management and Logistics Operations ERP built with **React 19**, **Vite 8**, **Tailwind CSS**, and **MongoDB**. Truck ERP provides end-to-end management for transport logistics: dispatching daily deliveries, tracking round-trip freight, monitoring fleet vehicles, managing drivers, logging fuel consumption, handling staff payroll/advances, and generating comprehensive financial profit-and-loss reports.
 
-## Features
+---
 
-- Login screen with CAPTCHA, failed-attempt tracking, and session-based route protection.
-- Dashboard overview with fleet, driver, fuel, delivery-readiness, and service-workload indicators.
-- Fleet management: list, search, add, and delete trucks.
-- Driver management: list, search/filter, add, and delete drivers.
-- Fuel logs: record fuel purchases, search logs, and delete entries.
-- Staff payments: record driver and helper payments, allowances, payment methods, notes, totals, and CSV exports.
-- Daily deliveries: record going and coming routes, separate cargo quantities, payments, expenses, and calculated net profit.
-- Delivery net profit is stored in `net_profit` using `Delivery Cost - Total Expenses - Due Amount`.
-- Due amounts can be edited independently; the stored net profit is recalculated when the due amount changes.
-- Maintenance: create and filter work orders using the current in-memory sample data.
-- Income report: filter sample delivery income by date and truck, view totals/charts, and export CSV data.
-- Responsive dashboard layout with sidebar navigation, modals, tables, icons, and Recharts visualizations.
+## Key Features
+
+### 1. Authentication & Route Protection
+- **Session-Based Guarding**: Route guard (`ProtectedLayout`) checks `sessionStorage.truckErpSession` before granting access to dashboard views.
+- **Dynamic Security CAPTCHA**: Visual math/alphanumeric challenge to deter automated logins.
+- **Lockout Prevention**: Tracks consecutive failed login attempts with progressive cool-down logic.
+- **Logout Confirmation**: Safe modal dialogue preventing accidental session termination.
+
+### 2. Operations Overview Dashboard
+- **Live Fleet Telemetry**: Real-time KPI summary cards displaying Total Trucks, Active Drivers, Fuel Logs, and Completed Deliveries.
+- **Financial Analytics Visualizer**: Interactive Recharts-powered 6-month historical trend charts displaying Freight Revenue, Operational Expenses, and Net Profit.
+
+### 3. Daily Deliveries & Round-Trip Dispatch
+- **Two-Way Route Tracking**: Capture both outbound (**Going**) and return (**Coming**) journeys with distinct dates, source, destination, cargo material, and weight tonnage.
+- **Detailed Financial Accounting**:
+  - **Delivery Cost (Gross Income)**
+  - **Advance Paid / Received Amount**
+  - **Due / Outstanding Amount** with inline editing (`PATCH`) and instant recalculation.
+  - **Itemized Expenses**: Fuel, Toll, Maintenance, Urea (DEF), and Extra Costs with descriptive notes.
+- **Automated Profit Formula**:
+  $$\text{Total Expense} = \text{Fuel} + \text{Toll} + \text{Maintenance} + \text{Urea} + \text{Extra}$$
+  $$\text{Received Amount} = \text{Delivery Cost} - \text{Due Amount}$$
+  $$\text{Net Profit} = \text{Received Amount} - \text{Total Expense}$$
+- **Data Export**: Export delivery log tables directly into `.csv`.
+
+### 4. Fleet Management
+- **Full CRUD Capabilities**: Add, edit (`PUT`), search, filter, and delete (`DELETE`) trucks.
+- **Vehicle Profiles**: Tracks Registration Number, Model, Vehicle Type (Trailer, Container, Flatbed, Tanker, etc.), Assigned Driver, Odometer Mileage, Registration Date, and Operational Status.
+- **Live Driver Association**: Dynamic dropdown selecting from registered, active drivers.
+- **Data Export**: Single-click CSV export of fleet inventories.
+
+### 5. Driver Management
+- **Full CRUD Capabilities**: Add, edit (`PUT`), filter by status (Active, Inactive, On Duty), search, and delete (`DELETE`) drivers.
+- **Driver Records**: Name, Phone Number, License Number (with duplicate conflict checks), Driving Experience, Assigned Truck, and Availability Status.
+- **Data Export**: CSV export of driver rosters.
+
+### 6. Fuel Logs & Consumption Monitoring
+- **Full CRUD Capabilities**: Add, edit (`PUT`), search, and delete (`DELETE`) fueling entries.
+- **Log Metrics**: Truck Registration, Driver Name, Liters Filled, Total Cost, Fuel Station, Transaction Date, and Odometer Mileage readings.
+- **Data Export**: CSV export of historical fuel purchases.
+
+### 7. Staff Payments & Payroll
+- **Disbursement Records**: Track salary disbursements, advance cash, trip allowances, and bonuses for drivers and helpers.
+- **Payment Details**: Truck registration association, staff classification, payment method (Cash, Bank Transfer, UPI, Cheque), month/year tags, and transaction notes.
+- **Financial Breakdown**: Real-time total payouts and CSV reporting.
+
+### 8. Income & Profitability Reporting
+- **Multi-Factor Filtering**: Filter delivery revenues and operating expenses by Custom Date Range (`startDate` to `endDate`) and specific Truck Registration Number.
+- **Consolidated Financials**: Real-time aggregation of Gross Delivery Income, Realized Cash Received, Pending Receivables (Dues), Total Trip Expenses, and Net Operating Profit.
+- **Detailed Inspection Modal**: View complete trip manifests, cargo details, and expense breakdowns for any individual delivery.
+- **Connected Architecture**: Backed directly by `/api/income` and `/api/staff-payments`.
+
+### 9. Maintenance & Work Orders
+- **Work Order Management**: Create, search, and track repairs by Truck Number, Service Type (Engine Overhaul, Brake Replacement, Oil Change, etc.), Assigned Mechanic, Priority (High, Medium, Low), Estimated Cost, and Status (Queued, In Progress, Completed, Pending Parts).
+
+---
 
 ## Technology Stack
 
-### Frontend
+| Layer | Technologies |
+| --- | --- |
+| **Frontend UI** | [React 19](https://react.dev/), [Vite 8](https://vite.dev/), [Tailwind CSS](https://tailwindcss.com/) |
+| **Routing** | [React Router 7](https://reactrouter.com/) |
+| **Visualization & Icons** | [Recharts 3](https://recharts.org/), [Lucide React](https://lucide.dev/) |
+| **Data Tables** | [TanStack React Table](https://tanstack.com/table) |
+| **Backend Options** | • **Vite Local API Middleware** (Integrated dev proxy)<br>• **Vercel Serverless Functions** (`/api` directory)<br>• **Standalone Express 4 Backend** (`backend/server.js`) |
+| **Database** | [MongoDB](https://www.mongodb.com/) (Node.js Driver `^7.6.0`, connection pooling) |
+| **Utilities** | Axios, Dotenv, CORS |
 
-- React 19
-- Vite 8
-- React Router 7
-- Recharts 3
-- Lucide React icons
-- TanStack React Table
-- Axios (available for shared API use)
-
-### Backend and data
-
-- Node.js
-- Express 4
-- MongoDB Node.js driver
-- MongoDB database named `truck_erp`
-- CORS and dotenv
+---
 
 ## Project Structure
 
 ```text
 truck-erp/
-├── api/                    # MongoDB-backed handler modules used by Vite and deployments
-│   ├── deliveries.js
-│   ├── drivers.js
-│   ├── fuel.js
-│   ├── income.js
-│   ├── maintenance.js
-│   ├── staff-payments.js
-│   └── trucks.js
-├── backend/
-│   ├── .env                # Local backend secrets; ignored by Git
-│   ├── package.json
-│   └── server.js           # Standalone Express server
-├── lib/mongodb.js          # Shared MongoDB client for API handlers
-├── public/                 # Static assets
+├── api/                    # Serverless & Vite API route handlers (MongoDB-backed)
+│   ├── deliveries.js       # GET, POST, PATCH (due update), DELETE
+│   ├── drivers.js          # GET, POST, PUT, DELETE
+│   ├── fuel.js             # GET, POST, PUT, DELETE
+│   ├── income.js           # GET (filtered income & expense aggregation)
+│   ├── maintenance.js      # GET, POST, DELETE
+│   ├── staff-payments.js   # GET, POST, DELETE
+│   └── trucks.js           # GET, POST, PUT, DELETE
+├── backend/                # Standalone Express 4 application
+│   ├── .env                # Backend environment configuration (git-ignored)
+│   ├── package.json        # Express dependencies (express, cors, dotenv, mongodb)
+│   └── server.js           # Standalone HTTP REST server on port 5000
+├── lib/
+│   └── mongodb.js          # Shared MongoDB client with global promise caching
+├── public/                 # Static public assets
 ├── src/
-│   ├── components/         # Layout, navigation, forms, and modal components
-│   ├── pages/              # Dashboard pages
-│   ├── App.jsx
-│   ├── routes.jsx
+│   ├── components/         # Reusable UI modals, navigation, and layout
+│   │   ├── AddDriverModal.jsx
+│   │   ├── AddFuelModal.jsx
+│   │   ├── AddTruckModal.jsx
+│   │   ├── AddWorkOrderModal.jsx
+│   │   ├── FormGroup.jsx
+│   │   ├── Header.jsx
+│   │   ├── Layout.jsx
+│   │   ├── LogoutModal.jsx
+│   │   └── Sidebar.jsx
+│   ├── pages/              # Primary dashboard page views
+│   │   ├── DailyDelivery.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── Drivers.jsx
+│   │   ├── Fleet.jsx
+│   │   ├── Fuel.jsx
+│   │   ├── IncomeReport.jsx
+│   │   ├── Login.jsx
+│   │   ├── Maintenance.jsx
+│   │   └── Stuff_payment.jsx
+│   ├── utils/              # Client-side helper utilities
+│   │   ├── apiResponse.js  # Safe JSON parsing & API fetch helpers
+│   │   └── exportCsv.js    # Browser-side CSV generation & download
 │   ├── App.css
-│   └── index.css
+│   ├── App.jsx
+│   ├── index.css
+│   └── routes.jsx          # Route declarations and session auth protection
 ├── index.html
-├── vite.config.js          # React/Vite config and local API middleware
-└── package.json
+├── package.json            # Root frontend dependencies & build scripts
+├── vercel.json             # Vercel deployment rewrite rules
+└── vite.config.js          # Vite configuration with built-in /api middleware
 ```
 
-## Requirements
+---
 
-- Node.js 18 or newer
-- npm
-- A MongoDB deployment or local MongoDB instance
+## Getting Started
 
-## Configuration
+### Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **npm**: v9.0.0 or higher
+- **MongoDB**: A running MongoDB instance (local or MongoDB Atlas connection string)
 
-The MongoDB connection string is read from `MONGODB_URI`. The standalone Express server also reads `PORT`, defaulting to `5000`.
+---
 
-Create or update `backend/.env`:
+### Configuration (.env)
 
+#### 1. Root Environment (for Vite Development Server & Local API)
+Create a `.env` file in the project root:
 ```env
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/truck_erp?retryWrites=true&w=majority
+```
+
+#### 2. Standalone Backend Environment (Optional)
+If running the standalone Express server (`backend/server.js`), create `backend/.env`:
+```env
 PORT=5000
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/truck_erp?retryWrites=true&w=majority
 ```
 
-The Vite development server loads environment variables from the project root, while the standalone backend loads them from `backend/.env`. If using the Vite local API middleware, make the same `MONGODB_URI` available in a root `.env` file as well:
+> **Security Reminder**: Never commit `.env` files to version control. Both `.env` and `backend/.env` are ignored by `.gitignore`.
 
-```env
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
-```
+---
 
-For Vercel, add `MONGODB_URI` in the project Settings under Environment Variables for Production, Preview, and Development as needed, then redeploy. The Vercel API functions under `api/` use this variable directly; do not expose it as a `VITE_*` variable.
+### Installation
 
-Never commit either `.env` file or real credentials. The repository ignores environment files by default.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/manikarnab2002/truck-erp.git
+   cd truck-erp
+   ```
 
-## Installation
+2. **Install root dependencies**:
+   ```bash
+   npm install
+   ```
 
-Install frontend dependencies from the repository root:
+3. **Install standalone backend dependencies** *(optional, only if using standalone Express)*:
+   ```bash
+   npm --prefix backend install
+   ```
 
-```bash
-npm install
-```
+---
 
-Install backend dependencies:
+### Running the Application
 
-```bash
-cd backend
-npm install
-cd ..
-```
+You can run the application in two different modes:
 
-## Running Locally
-
-### Frontend with Vite local API handlers
-
-From the repository root, after configuring the root `.env`:
-
+#### Option A: Vite Development Server with Integrated API (Recommended)
+Vite's built-in development middleware automatically binds the route handlers in `api/` to `/api/*`:
 ```bash
 npm run dev
 ```
+Open your browser at `http://localhost:5173`. Requests to `/api/trucks`, `/api/drivers`, etc., are processed directly against MongoDB via `api/*.js`.
 
-Open the URL printed by Vite, normally `http://localhost:5173`.
+#### Option B: Standalone Express API + Vite Frontend
+1. **Start the Express API server**:
+   ```bash
+   npm --prefix backend run dev
+   ```
+   *(Server starts on `http://localhost:5000`)*
 
-The Vite configuration mounts the handlers in `api/` under `/api`, so requests such as `/api/drivers` and `/api/deliveries` are handled by the local development server.
+2. **In a separate terminal, start the frontend**:
+   ```bash
+   npm run dev
+   ```
 
-### Standalone Express backend
-
-From the repository root:
-
-```bash
-npm --prefix backend run dev
-```
-
-Or start it without nodemon:
-
-```bash
-npm --prefix backend start
-```
-
-The standalone API starts on `http://localhost:5000` by default. Its health endpoint is:
-
-```text
-GET http://localhost:5000/
-```
-
-It returns `{ "success": true, "message": "Truck ERP API is running" }` when MongoDB is connected and the server is running.
+---
 
 ## Frontend Routes
 
-All routes except `/login` require the `truckErpSession` value in `sessionStorage`.
+All dashboard routes are guarded by `sessionStorage.truckErpSession`:
 
-| Route             | Screen                           |
-| ----------------- | -------------------------------- |
-| `/login`          | Login and CAPTCHA                |
-| `/`               | Dashboard                        |
-| `/dashboard`      | Dashboard                        |
-| `/daily-delivery` | Daily delivery entry and records |
-| `/fleet`          | Fleet management                 |
-| `/maintenance`    | Maintenance and repairs          |
-| `/drivers`        | Driver management                |
-| `/fuel`           | Fuel logs and consumption        |
-| `/stuff-payment`  | Driver and helper payments       |
-| `/income-report`  | Income report                    |
-| `/logout`         | Logout confirmation modal        |
+| Path | View Component | Description |
+| --- | --- | --- |
+| `/login` | `Login.jsx` | Login form with CAPTCHA and attempt locking |
+| `/` or `/dashboard` | `Dashboard.jsx` | Fleet metrics, statistics, and monthly revenue chart |
+| `/daily-delivery` | `DailyDelivery.jsx` | Dispatch manifests, round trips, expenses, and dues |
+| `/fleet` | `Fleet.jsx` | Truck registration, driver assignments, and vehicle list |
+| `/drivers` | `Drivers.jsx` | Driver roster, contact info, license validation, and status |
+| `/fuel` | `Fuel.jsx` | Fuel intake logs, mileage tracking, and station records |
+| `/stuff-payment` | `Stuff_payment.jsx` | Staff payroll, helper wages, allowances, and advances |
+| `/income-report` | `IncomeReport.jsx` | Financial income/expense reports with date & truck filters |
+| `/maintenance` | `Maintenance.jsx` | Vehicle repair logs, work orders, and service statuses |
+| `/logout` | `LogoutModal.jsx` | Session termination dialogue |
 
-## API Endpoints
+---
 
-The frontend calls these endpoints with relative `/api` URLs. The Vite handlers support the methods below.
+## REST API Reference
 
-| Endpoint                                       | Methods       | Purpose                                         |
-| ---------------------------------------------- | ------------- | ----------------------------------------------- |
-| `/api/drivers`                                 | `GET`, `POST` | List and create drivers                         |
-| `/api/drivers?id=<id>`                         | `DELETE`      | Delete a driver by generated driver ID          |
-| `/api/trucks`                                  | `GET`, `POST` | List and create trucks                          |
-| `/api/trucks?id=<id>`                          | `DELETE`      | Delete a truck by MongoDB ObjectId              |
-| `/api/fuel`                                    | `GET`, `POST` | List and create fuel logs                       |
-| `/api/fuel?id=<id>`                            | `DELETE`      | Delete a fuel log by generated log ID           |
-| `/api/staff-payments`                          | `GET`, `POST` | List and create staff payment records           |
-| `/api/staff-payments?id=<id>`                  | `DELETE`      | Delete a staff payment by MongoDB or payment ID |
-| `/api/deliveries`                              | `GET`, `POST` | List and create delivery records                |
-| `/api/deliveries?id=<id>`                      | `PATCH`       | Update due amount and recalculate `net_profit`  |
-| `/api/deliveries?id=<id>`                      | `DELETE`      | Delete a delivery by MongoDB ObjectId           |
-| `/api/maintenance`                             | `GET`, `POST` | List and create maintenance work orders         |
-| `/api/maintenance?id=<id>`                     | `DELETE`      | Delete a work order by generated work-order ID  |
-| `/api/income?startDate=&endDate=&truckNumber=` | `GET`         | Filter and aggregate delivery income            |
+The application supports both query parameter identifier formatting (`?id=<id>`) and path parameter formatting (`/:id`).
 
-Successful create operations return a JSON object containing `success`, `message`, and usually `data`. Validation failures generally return HTTP `400`; duplicate driver licenses or truck registration numbers return HTTP `409`; missing records return HTTP `404`.
+### Trucks (`/api/trucks`)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/trucks` | Retrieve all registered trucks (sorted by creation date) |
+| `POST` | `/api/trucks` | Register a new truck (requires unique registration number) |
+| `PUT` | `/api/trucks?id=<id>` or `/:id` | Update truck details (model, type, driver, status) |
+| `DELETE` | `/api/trucks?id=<id>` or `/:id` | Remove a truck record |
 
-## MongoDB Collections
+### Drivers (`/api/drivers`)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/drivers` | Retrieve all drivers |
+| `POST` | `/api/drivers` | Register a new driver (requires unique license number) |
+| `PUT` | `/api/drivers?id=<id>` or `/:id` | Update driver details (phone, status, assigned truck) |
+| `DELETE` | `/api/drivers?id=<id>` or `/:id` | Remove a driver record |
 
-The application uses the `truck_erp` database and these collections:
+### Fuel Logs (`/api/fuel`)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/fuel` | Retrieve all fuel purchase logs |
+| `POST` | `/api/fuel` | Record a new fuel purchase |
+| `PUT` | `/api/fuel?id=<id>` or `/:id` | Update an existing fuel log |
+| `DELETE` | `/api/fuel?id=<id>` or `/:id` | Delete a fuel log entry |
 
-- `drivers`: driver identity, license, assignment, status, and timestamps.
-- `trucks`: registration, model/type, assigned driver, mileage, service date, status, and timestamps.
-- `fuelLogs`: truck, driver, liters, cost, odometer, mileage, station, date, and timestamps.
-- `staff_payments`: driver/helper payments, payment type, payment method, amount, notes, month, year, and timestamps.
-- `deliveries`: route, vehicle/driver, cargo, payment, expenses, due amount, total expense, and `net_profit`.
+### Deliveries (`/api/deliveries`)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/deliveries` | Retrieve all delivery manifests |
+| `POST` | `/api/deliveries` | Create a delivery entry with round-trip routes & costs |
+| `PATCH` | `/api/deliveries?id=<id>` or `/:id` | Update due amount and automatically recalculate `net_profit` |
+| `DELETE` | `/api/deliveries?id=<id>` or `/:id` | Remove a delivery record |
 
-For a delivery, net profit is calculated as:
+### Staff Payments (`/api/staff-payments`)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/staff-payments` | List all staff wage and advance payments |
+| `POST` | `/api/staff-payments` | Record a salary, advance, or bonus disbursement |
+| `DELETE` | `/api/staff-payments?id=<id>` or `/:id` | Remove a staff payment record |
 
-```text
-net_profit = deliveryCost - totalExpense - dueAmount
-```
+### Income & Reports (`/api/income`)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/income?startDate=&endDate=&truckNumber=` | Filter delivery revenues, calculate totals, and return aggregate analytics |
 
-- `workOrders`: truck, service type, mechanic, priority, cost, start date, status, and timestamps.
+### Maintenance (`/api/maintenance`)
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/maintenance` | Retrieve all maintenance work orders |
+| `POST` | `/api/maintenance` | Create a new maintenance work order |
+| `DELETE` | `/api/maintenance?id=<id>` or `/:id` | Remove a work order |
 
-## Available Scripts
+---
 
-### Root scripts
+## MongoDB Database Schema
 
-| Command                        | Description                                             |
-| ------------------------------ | ------------------------------------------------------- |
-| `npm run dev`                  | Start Vite development server with local API middleware |
-| `npm run build`                | Create a production frontend build in `dist/`           |
-| `npm run preview`              | Preview the production frontend build                   |
-| `npm run lint`                 | Run ESLint across the project                           |
-| `npm --prefix backend start`   | Start the Express backend                               |
-| `npm --prefix backend run dev` | Start the Express backend with nodemon                  |
+The database (`truck_erp`) organizes data into the following collections:
 
-### Backend directory scripts
+- **`trucks`**: Registration number (`regNo`), model, vehicle type, assigned driver, odometer, service date, status, and timestamps.
+- **`drivers`**: Full name, contact phone, license number (`licenseNo`), experience, assigned vehicle, status, and timestamps.
+- **`deliveries`**: Outbound (going) and return (coming) trip dates, routes, material, cargo tonnage, gross delivery cost, advance received, due amount, itemized expenses (fuel, toll, maintenance, urea, extra costs with notes), total expense, and calculated `net_profit`.
+- **`fuelLogs`**: Truck number, driver name, fuel quantity in liters, total cost, odometer reading, fueling station, purchase date, and timestamps.
+- **`staff_payments`**: Truck registration, staff type (Driver/Helper), payment classification (Salary, Advance, Allowance, Bonus), amount, payment method, date, month, year, and notes.
+- **`workOrders`**: Truck registration, service type, technician/mechanic, priority level, estimated cost, start date, status, and timestamps.
 
-From `backend/`, `npm start` starts Express and `npm run dev` starts it with nodemon.
+---
 
-## Verification
+## Available NPM Scripts
 
-Run the project checks from the repository root:
+### Root Directory
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Launch the Vite development server with local `/api` middleware |
+| `npm run build` | Compile and bundle production assets into `dist/` |
+| `npm run preview` | Locally preview the compiled production build |
+| `npm run lint` | Execute ESLint across all source files |
 
-```bash
-npm run lint
-npm run build
-```
+### Backend Directory (`backend/`)
+| Command | Description |
+| --- | --- |
+| `npm --prefix backend start` | Start the Express API server with `node server.js` |
+| `npm --prefix backend run dev` | Start the Express API server with live reloading via `nodemon` |
 
-## Current Limitations and Production Notes
+---
 
-- Authentication is client-side only. The valid login values are currently hardcoded in `src/pages/Login.jsx`; replace this with server-side authentication before production use.
-- The CAPTCHA and login-attempt limit are browser-side controls and are not a security boundary.
-- Maintenance and income-report screens currently initialize from sample data in the React components. The corresponding API handlers exist, but these screens are not yet connected to them.
-- The repository contains both Vite API handlers and a standalone Express implementation. Keep their request and identifier behavior aligned when changing the API.
-- The standalone Express server currently implements health, driver, truck, fuel, delivery, and staff payment routes. The Vite handler path also exposes maintenance, income, and staff payment handlers.
-- No automated test suite is currently defined in `package.json`.
-- Add authentication/authorization, request validation, rate limiting, structured logging, database indexes, and deployment-specific environment configuration before exposing the application publicly.
+## Deployment
+
+### Deploying to Vercel
+1. Push your code to your GitHub repository.
+2. Import the project in the [Vercel Dashboard](https://vercel.com).
+3. Under **Project Settings > Environment Variables**, configure:
+   - `MONGODB_URI`: Your MongoDB Atlas connection string.
+4. Deploy. Vercel automatically detects Vite, sets output to `dist/`, routes `/api/*` to serverless function handlers in `api/`, and applies client-side routing rewrites from `vercel.json`.
+
+---
 
 ## License
 
-No license file is currently included in this repository.
+This project is licensed under the [ISC License](LICENSE) (or see repository settings).

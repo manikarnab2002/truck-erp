@@ -34,6 +34,8 @@ export default async function handler(req, res) {
       const maintenanceCost = Number(req.body.maintenanceCost || 0);
       const ureaCost = Number(req.body.ureaCost || 0);
       const extraCost = Number(req.body.extraCost || 0);
+      const driverCharge = Number(req.body.driverCharge || 0);
+      const commission = Number(req.body.commission || 0);
 
       // =========================
       // CALCULATIONS
@@ -48,7 +50,9 @@ export default async function handler(req, res) {
         tollCost +
         maintenanceCost +
         ureaCost +
-        extraCost;
+        extraCost +
+        driverCharge +
+        commission;
 
       // Amount actually received
       const receivedAmount = Math.max(
@@ -135,7 +139,9 @@ export default async function handler(req, res) {
         // IMPORTANT: EXTRA COST
         extraCost,
 
-        
+        driverCharge,
+        commission,
+
         extraCostNote:
           req.body.extraCostNote || "",
 
@@ -227,12 +233,20 @@ export default async function handler(req, res) {
       const extraCost =
         Number(delivery.extraCost || 0);
 
+      const driverCharge =
+        Number(delivery.driverCharge || 0);
+
+      const commission =
+        Number(delivery.commission || 0);
+
       const totalExpense =
         fuelCost +
         tollCost +
         maintenanceCost +
         ureaCost +
-        extraCost;
+        extraCost +
+        driverCharge +
+        commission;
 
       // Amount actually received
       const receivedAmount = Math.max(
@@ -258,6 +272,8 @@ export default async function handler(req, res) {
         maintenanceCost,
         ureaCost,
         extraCost,
+        driverCharge,
+        commission,
 
         totalExpense,
 
