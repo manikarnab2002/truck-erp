@@ -696,13 +696,8 @@ app.post("/api/deliveries", async (req, res) => {
 app.patch("/api/deliveries", async (req, res) => {
   try {
     const id = req.query.id;
-    const incomingDueAmount = Number(req.body?.dueAmount);
-
     if (!id || !ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Valid delivery ID is required" });
-    }
-    if (!Number.isFinite(incomingDueAmount) || incomingDueAmount < 0) {
-      return res.status(400).json({ success: false, message: "A valid due amount is required" });
     }
 
     const delivery = await db.collection("deliveries").findOne({ _id: new ObjectId(id) });
@@ -710,25 +705,38 @@ app.patch("/api/deliveries", async (req, res) => {
       return res.status(404).json({ success: false, message: "Delivery not found" });
     }
 
-    const deliveryCost = Number(delivery.deliveryCost || 0);
-    const requestedDueAmount = Number(req.body?.dueAmount ?? delivery.dueAmount ?? 0);
-    const dueAmount = Number.isFinite(requestedDueAmount) && requestedDueAmount >= 0 ? requestedDueAmount : Number(delivery.dueAmount || 0);
+    const body = req.body || {};
+    const editableFields = [
+      "truckName", "truckNumber", "driverName", "status", "goingDate", "goingSource",
+      "goingDestination", "deliveryDate", "source", "destination", "comingDate",
+      "comingSource", "comingDestination", "going_material", "coming_material",
+      "goingQuantity", "comingQuantity", "quantityUnit", "deliveryCost", "fuelCost",
+      "tollCost", "maintenanceCost", "ureaCost", "extraCost", "extraCostNote",
+      "driverCharge", "commission", "maintenanceType", "maintenanceDetails", "notes",
+    ];
+    const updateFields = Object.fromEntries(
+      editableFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    );
+    ["goingQuantity", "comingQuantity", "deliveryCost", "fuelCost", "tollCost", "maintenanceCost", "ureaCost", "extraCost", "driverCharge", "commission"]
+      .forEach((field) => {
+        if (Object.prototype.hasOwnProperty.call(updateFields, field)) updateFields[field] = Number(updateFields[field] || 0);
+      });
 
-    const totalExpense =
-      delivery.totalExpense !== undefined
-        ? Number(delivery.totalExpense)
-        : Number(delivery.fuelCost || 0) +
-          Number(delivery.tollCost || 0) +
-          Number(delivery.maintenanceCost || 0) +
-          Number(delivery.ureaCost || 0) +
-          Number(delivery.extraCost || 0) +
-          Number(delivery.driverCharge || 0) +
-          Number(delivery.commission || 0);
+    const deliveryCost = Number(updateFields.deliveryCost ?? delivery.deliveryCost ?? 0);
+    const advancePaid = Number(body.advancePaid ?? body.amountPaid ?? delivery.advancePaid ?? delivery.amountPaid ?? 0);
+    const requestedDueAmount = Number(body.dueAmount);
+    const dueAmount = Number.isFinite(requestedDueAmount) && requestedDueAmount >= 0
+      ? requestedDueAmount
+      : Math.max(deliveryCost - advancePaid, 0);
+    const totalExpense = ["fuelCost", "tollCost", "maintenanceCost", "ureaCost", "extraCost", "driverCharge", "commission"]
+      .reduce((total, field) => total + Number(updateFields[field] ?? delivery[field] ?? 0), 0);
 
     const receivedAmount = Math.max(deliveryCost - dueAmount, 0);
     const netProfit = receivedAmount - totalExpense;
 
-    const updateFields = {
+    Object.assign(updateFields, {
       dueAmount,
       totalExpense,
       receivedAmount,
@@ -738,20 +746,17 @@ app.patch("/api/deliveries", async (req, res) => {
       amountPaid: receivedAmount,
       advancePaid: receivedAmount,
       updatedAt: new Date(),
-    };
+    });
 
     await db.collection("deliveries").updateOne(
       { _id: new ObjectId(id) },
       { $set: updateFields }
     );
 
+    const updatedDelivery = await db.collection("deliveries").findOne({ _id: new ObjectId(id) });
     return res.status(200).json({
       success: true,
-      dueAmount,
-      net_profit: netProfit,
-      netProfit,
-      amountPaid: receivedAmount,
-      advancePaid: receivedAmount,
+      data: updatedDelivery,
     });
   } catch (error) {
     console.error("Failed to update due amount:", error);

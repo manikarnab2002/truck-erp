@@ -42,7 +42,10 @@ export default async function handler(req, res) {
       // =========================
 
       // Due = Delivery Cost - Advance
-      const dueAmount = Math.max(deliveryCost - advancePaid, 0);
+      const requestedDueAmount = Number(body.dueAmount);
+      const dueAmount = Number.isFinite(requestedDueAmount) && requestedDueAmount >= 0
+        ? requestedDueAmount
+        : Math.max(deliveryCost - advancePaid, 0);
 
       // Total Expenses
       const totalExpense =
@@ -186,19 +189,10 @@ export default async function handler(req, res) {
     // =========================
     if (req.method === "PATCH") {
       const id = req.query.id;
-      const dueAmount = Number(req.body?.dueAmount);
-
       if (!id || !ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
           message: "Valid delivery ID is required",
-        });
-      }
-
-      if (!Number.isFinite(dueAmount) || dueAmount < 0) {
-        return res.status(400).json({
-          success: false,
-          message: "A valid due amount is required",
         });
       }
 
@@ -213,91 +207,56 @@ export default async function handler(req, res) {
         });
       }
 
-      const deliveryCost =
-        Number(delivery.deliveryCost || 0);
-
-      // ALWAYS recalculate expenses from individual fields.
-      // Do NOT trust old totalExpense values.
-      const fuelCost =
-        Number(delivery.fuelCost || 0);
-
-      const tollCost =
-        Number(delivery.tollCost || 0);
-
-      const maintenanceCost =
-        Number(delivery.maintenanceCost || 0);
-
-      const ureaCost =
-        Number(delivery.ureaCost || 0);
-
-      const extraCost =
-        Number(delivery.extraCost || 0);
-
-      const driverCharge =
-        Number(delivery.driverCharge || 0);
-
-      const commission =
-        Number(delivery.commission || 0);
-
-      const totalExpense =
-        fuelCost +
-        tollCost +
-        maintenanceCost +
-        ureaCost +
-        extraCost +
-        driverCharge +
-        commission;
-
-      // Amount actually received
-      const receivedAmount = Math.max(
-        deliveryCost - dueAmount,
-        0
+      const body = req.body || {};
+      const editableFields = [
+        "truckName", "truckNumber", "driverName", "status", "goingDate", "goingSource",
+        "goingDestination", "deliveryDate", "source", "destination", "comingDate",
+        "comingSource", "comingDestination", "going_material", "coming_material",
+        "goingQuantity", "comingQuantity", "quantityUnit", "deliveryCost", "fuelCost",
+        "tollCost", "maintenanceCost", "ureaCost", "extraCost", "extraCostNote",
+        "driverCharge", "commission", "maintenanceType", "maintenanceDetails", "notes",
+      ];
+      const updateFields = Object.fromEntries(
+        editableFields
+          .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+          .map((field) => [field, body[field]])
       );
+      ["goingQuantity", "comingQuantity", "deliveryCost", "fuelCost", "tollCost", "maintenanceCost", "ureaCost", "extraCost", "driverCharge", "commission"]
+        .forEach((field) => {
+          if (Object.prototype.hasOwnProperty.call(updateFields, field)) {
+            updateFields[field] = Number(updateFields[field] || 0);
+          }
+        });
 
-      // Net Profit
-      const netProfit =
-        receivedAmount - totalExpense;
+      const deliveryCost = Number(updateFields.deliveryCost ?? delivery.deliveryCost ?? 0);
+      const advancePaid = Number(body.advancePaid ?? body.amountPaid ?? delivery.advancePaid ?? delivery.amountPaid ?? 0);
+      const dueAmount = Math.max(deliveryCost - advancePaid, 0);
+      const totalExpense = ["fuelCost", "tollCost", "maintenanceCost", "ureaCost", "extraCost", "driverCharge", "commission"]
+        .reduce((total, field) => total + Number(updateFields[field] ?? delivery[field] ?? 0), 0);
+      const receivedAmount = Math.max(deliveryCost - dueAmount, 0);
+      const netProfit = receivedAmount - totalExpense;
 
-      const updateFields = {
+      Object.assign(updateFields, {
         dueAmount,
-
         receivedAmount,
-
         amountPaid: receivedAmount,
         advancePaid: receivedAmount,
-
-        // Re-save all expense values
-        fuelCost,
-        tollCost,
-        maintenanceCost,
-        ureaCost,
-        extraCost,
-        driverCharge,
-        commission,
-
         totalExpense,
-
         net_profit: netProfit,
         netProfit,
         netIncome: netProfit,
-
         updatedAt: new Date(),
-      };
+      });
 
       await deliveries.updateOne(
         { _id: new ObjectId(id) },
         { $set: updateFields }
       );
+      const updatedDelivery = await deliveries.findOne({ _id: new ObjectId(id) });
 
       return res.status(200).json({
         success: true,
-        dueAmount,
-        receivedAmount,
-        totalExpense,
-        net_profit: netProfit,
-        netProfit,
-        amountPaid: receivedAmount,
-        advancePaid: receivedAmount,
+        data: updatedDelivery,
       });
     }
 

@@ -105,6 +105,7 @@ export default function DailyDelivery() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [editingDeliveryId, setEditingDeliveryId] = useState(null);
 
   useEffect(() => {
     loadDeliveries();
@@ -225,15 +226,37 @@ export default function DailyDelivery() {
     });
   };
 
+  const handleEditDelivery = (delivery) => {
+    const deliveryId = delivery._id || delivery.id;
+    setEditingDeliveryId(deliveryId);
+    setFormData({
+      ...emptyForm,
+      ...delivery,
+      goingDate: delivery.goingDate || delivery.deliveryDate || emptyForm.goingDate,
+      goingSource: delivery.goingSource || delivery.source || "",
+      goingDestination: delivery.goingDestination || delivery.destination || "",
+      going_material: delivery.going_material || delivery.material || "",
+      goingQuantity: delivery.goingQuantity ?? delivery.quantity ?? "",
+      advancePaid: delivery.advancePaid ?? delivery.amountPaid ?? "",
+      dueAmount: String(delivery.dueAmount ?? 0),
+      netProfit: String(delivery.net_profit ?? delivery.netProfit ?? delivery.netIncome ?? 0),
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const response = await fetch("/api/deliveries", {
-        method: "POST",
+      const isEditing = Boolean(editingDeliveryId);
+      const response = await fetch(
+        isEditing ? `/api/deliveries?id=${encodeURIComponent(editingDeliveryId)}` : "/api/deliveries",
+        {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
-      });
+        }
+      );
 
       const result = await readApiResponse(response);
 
@@ -242,9 +265,17 @@ export default function DailyDelivery() {
         return;
       }
 
-      setDeliveries((prev) => [result.data || result, ...prev]);
+      const updatedDelivery = result.data || result;
+      setDeliveries((prev) =>
+        isEditing
+          ? prev.map((delivery) =>
+              (delivery._id || delivery.id) === editingDeliveryId ? updatedDelivery : delivery
+            )
+          : [updatedDelivery, ...prev]
+      );
       setSaved(true);
       setFormData(emptyForm);
+      setEditingDeliveryId(null);
 
       setTimeout(() => {
         setSaved(false);
@@ -281,6 +312,7 @@ export default function DailyDelivery() {
 
   const handleReset = () => {
     setFormData(emptyForm);
+    setEditingDeliveryId(null);
   };
 
   const handleExportExcel = () => {
@@ -918,7 +950,7 @@ export default function DailyDelivery() {
 
           <button type="submit" style={styles.saveBtn}>
             <Save size={17} />
-            Save Delivery Record
+            {editingDeliveryId ? "Update Delivery Record" : "Save Delivery Record"}
           </button>
         </div>
       </form>
@@ -1065,12 +1097,20 @@ export default function DailyDelivery() {
                           </button>
                           <button
                             type="button"
+                            onClick={() => handleEditDelivery(delivery)}
+                            style={styles.editBtn}
+                            title="Edit Delivery Details"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          {/* <button
+                            type="button"
                             onClick={() => handleEditDueAmount(delivery)}
                             style={styles.editBtn}
                             title="Update Due Balance"
                           >
                             <Pencil size={15} />
-                          </button>
+                          </button> */}
                           <button
                             type="button"
                             onClick={() => handleDelete(id)}
