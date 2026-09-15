@@ -42,10 +42,7 @@ export default async function handler(req, res) {
       // =========================
 
       // Due = Delivery Cost - Advance
-      const requestedDueAmount = Number(body.dueAmount);
-      const dueAmount = Number.isFinite(requestedDueAmount) && requestedDueAmount >= 0
-        ? requestedDueAmount
-        : Math.max(deliveryCost - advancePaid, 0);
+      const dueAmount = Math.max(deliveryCost - advancePaid, 0);
 
       // Total Expenses
       const totalExpense =
@@ -230,7 +227,10 @@ export default async function handler(req, res) {
 
       const deliveryCost = Number(updateFields.deliveryCost ?? delivery.deliveryCost ?? 0);
       const advancePaid = Number(body.advancePaid ?? body.amountPaid ?? delivery.advancePaid ?? delivery.amountPaid ?? 0);
-      const dueAmount = Math.max(deliveryCost - advancePaid, 0);
+      const requestedDueAmount = Number(body.dueAmount);
+      const dueAmount = Number.isFinite(requestedDueAmount) && requestedDueAmount >= 0
+        ? requestedDueAmount
+        : Math.max(deliveryCost - advancePaid, 0);
       const totalExpense = ["fuelCost", "tollCost", "maintenanceCost", "ureaCost", "extraCost", "driverCharge", "commission"]
         .reduce((total, field) => total + Number(updateFields[field] ?? delivery[field] ?? 0), 0);
       const receivedAmount = Math.max(deliveryCost - dueAmount, 0);
