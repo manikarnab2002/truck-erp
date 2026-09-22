@@ -623,6 +623,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0"
                   min="0"
+                  className="no-spinner"
                   style={styles.quantityInput}
                 />
                 <select
@@ -697,6 +698,7 @@ export default function DailyDelivery() {
                   value={formData.comingQuantity}
                   onChange={handleChange}
                   placeholder="0"
+                  className="no-spinner"
                   min="0"
                   style={styles.quantityInput}
                 />
@@ -742,6 +744,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0.00"
                   min="0"
+                  className="no-spinner"
                   style={styles.iconInput}
                 />
               </div>
@@ -757,6 +760,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0.00"
                   min="0"
+                  className="no-spinner"
                   style={styles.iconInput}
                 />
               </div>
@@ -772,6 +776,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0.00"
                   min="0"
+                  className="no-spinner"
                   style={styles.iconInput}
                 />
               </div>
@@ -787,6 +792,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0.00"
                   min="0"
+                  className="no-spinner"
                   style={styles.iconInput}
                 />
               </div>
@@ -803,6 +809,7 @@ export default function DailyDelivery() {
                     onChange={handleChange}
                     placeholder="Cost"
                     min="0"
+                    className="no-spinner"
                     style={styles.iconInput}
                   />
                 </div>
@@ -834,6 +841,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0.00"
                   min="0"
+                  className="no-spinner"
                   style={styles.iconInput}
                 />
               </div>
@@ -850,6 +858,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0.00"
                   min="0"
+                  className="no-spinner"
                   style={styles.iconInput}
                 />
               </div>
@@ -865,6 +874,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0.00"
                   min="0"
+                  className="no-spinner"
                   style={styles.iconInput}
                 />
               </div>
@@ -880,6 +890,7 @@ export default function DailyDelivery() {
                   onChange={handleChange}
                   placeholder="0.00"
                   min="0"
+                  className="no-spinner"
                   style={styles.iconInput}
                 />
               </div>
