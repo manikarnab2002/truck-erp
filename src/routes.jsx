@@ -48,6 +48,7 @@ export default function AppRoutes() {
         <Route path="daily-delivery" element={<DailyDelivery />} />
         <Route path="fleet" element={<Fleet />} />
         <Route path="maintenance" element={<Maintenance />} />
+        <Route path="Maintenance" element={<Maintenance />} />
         <Route path="drivers" element={<Drivers />} />
         <Route path="fuel" element={<Fuel />} />
         <Route path="income-report" element={<IncomeReport />} />

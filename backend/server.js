@@ -873,6 +873,190 @@ app.delete("/api/staff-payments", async (req, res) => {
 });
 
 // ==========================================
+// MAINTENANCE
+// ==========================================
+app.get("/api/maintenance", async (req, res) => {
+  try {
+    const records = await db
+      .collection("maintenance")
+      .find({})
+      .sort({ paymentDate: -1, createdAt: -1 })
+      .toArray();
+
+    if (records.length === 0) {
+      const legacyWorkOrders = await db.collection("workOrders").find({}).sort({ createdAt: -1 }).toArray();
+      if (legacyWorkOrders.length > 0) {
+        const mappedLegacy = legacyWorkOrders.map((wo) => ({
+          _id: wo._id,
+          id: wo.id,
+          paymentDate: wo.startDate || new Date(wo.createdAt || Date.now()).toISOString().split("T")[0],
+          truckRegNo: wo.truckNo || "",
+          maintenanceCost: Number(String(wo.cost || "0").replace(/[^0-9.-]/g, "")) || 0,
+          maintenanceType: wo.serviceType || "General Maintenance",
+          notes: wo.mechanic ? `Mechanic: ${wo.mechanic}` : "",
+          createdAt: wo.createdAt || new Date(),
+          updatedAt: wo.updatedAt || new Date(),
+        }));
+        return res.status(200).json(mappedLegacy);
+      }
+    }
+
+    res.status(200).json(records);
+  } catch (error) {
+    console.error("Failed to load maintenance records:", error);
+    res.status(500).json({ success: false, message: "Failed to load maintenance records." });
+  }
+});
+
+app.post("/api/maintenance", async (req, res) => {
+  try {
+    const {
+      paymentDate,
+      date,
+      truckRegNo,
+      truckNo,
+      maintenanceCost,
+      cost,
+      maintenanceType,
+      serviceType,
+      notes,
+    } = req.body || {};
+
+    const finalTruckRegNo = (truckRegNo || truckNo || "").trim();
+    const finalMaintenanceType = (maintenanceType || serviceType || "").trim();
+    const rawCost = maintenanceCost !== undefined ? maintenanceCost : cost;
+    const numericCost = Number(rawCost);
+
+    if (!finalTruckRegNo) {
+      return res.status(400).json({
+        success: false,
+        message: "Truck registration number is required.",
+      });
+    }
+
+    if (!finalMaintenanceType) {
+      return res.status(400).json({
+        success: false,
+        message: "Maintenance type is required.",
+      });
+    }
+
+    if (!Number.isFinite(numericCost) || numericCost <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Maintenance cost must be a valid positive number.",
+      });
+    }
+
+    const finalPaymentDate = paymentDate || date || new Date().toISOString().split("T")[0];
+
+    const record = {
+      id: `MNT-${Date.now()}`,
+      paymentDate: finalPaymentDate,
+      truckRegNo: finalTruckRegNo,
+      maintenanceCost: numericCost,
+      maintenanceType: finalMaintenanceType,
+      notes: (notes || "").trim(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await db.collection("maintenance").insertOne(record);
+
+    res.status(201).json({
+      success: true,
+      message: "Maintenance record saved successfully.",
+      data: { _id: result.insertedId, ...record },
+    });
+  } catch (error) {
+    console.error("Failed to save maintenance record:", error);
+    res.status(500).json({ success: false, message: "Failed to save maintenance record." });
+  }
+});
+
+app.put("/api/maintenance/:id?", async (req, res) => {
+  try {
+    const id = req.params.id || req.query.id || req.body?.id || req.body?._id;
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Record ID is required." });
+    }
+
+    const {
+      paymentDate,
+      date,
+      truckRegNo,
+      truckNo,
+      maintenanceCost,
+      cost,
+      maintenanceType,
+      serviceType,
+      notes,
+    } = req.body || {};
+
+    const finalTruckRegNo = (truckRegNo || truckNo || "").trim();
+    const finalMaintenanceType = (maintenanceType || serviceType || "").trim();
+    const rawCost = maintenanceCost !== undefined ? maintenanceCost : cost;
+    const numericCost = Number(rawCost);
+
+    if (!finalTruckRegNo || !finalMaintenanceType || !Number.isFinite(numericCost) || numericCost <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Truck reg no, maintenance type, and valid positive cost are required.",
+      });
+    }
+
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { id };
+    const current = await db.collection("maintenance").findOne(query);
+
+    if (!current) {
+      return res.status(404).json({ success: false, message: "Maintenance record not found." });
+    }
+
+    const updatedRecord = {
+      ...current,
+      paymentDate: paymentDate || date || current.paymentDate,
+      truckRegNo: finalTruckRegNo,
+      maintenanceCost: numericCost,
+      maintenanceType: finalMaintenanceType,
+      notes: notes !== undefined ? (notes || "").trim() : current.notes,
+      updatedAt: new Date(),
+    };
+
+    await db.collection("maintenance").updateOne(query, { $set: updatedRecord });
+
+    res.status(200).json({
+      success: true,
+      message: "Maintenance record updated successfully.",
+      data: updatedRecord,
+    });
+  } catch (error) {
+    console.error("Failed to update maintenance record:", error);
+    res.status(500).json({ success: false, message: "Failed to update maintenance record." });
+  }
+});
+
+app.delete("/api/maintenance/:id?", async (req, res) => {
+  try {
+    const id = req.params.id || req.query.id;
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Record ID is required." });
+    }
+
+    const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { id };
+    const result = await db.collection("maintenance").deleteOne(query);
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: "Maintenance record not found." });
+    }
+
+    res.status(200).json({ success: true, message: "Maintenance record deleted successfully." });
+  } catch (error) {
+    console.error("Failed to delete maintenance record:", error);
+    res.status(500).json({ success: false, message: "Failed to delete maintenance record." });
+  }
+});
+
+// ==========================================
 // START SERVER
 // ==========================================
 connectDatabase().then(() => {

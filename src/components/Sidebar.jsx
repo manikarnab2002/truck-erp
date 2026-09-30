@@ -9,7 +9,7 @@ export default function Sidebar() {
     { path: '/Dashboard', label: '📊 Dashboard' },
     { path: '/daily-delivery', label: '📅 Daily Delivery' },
     { path: '/Fleet', label: '🚚 Trucks' },
-    // { path: '/Maintenance', label: '🔧 Repairs & Service' },
+    { path: '/maintenance', label: '🔧 Maintenance' },
     { path: '/Drivers', label: '👨‍✈️ Drivers' },
     { path: '/Fuel', label: '⛽ Fuel Logs' },
     {path: '/stuff-payment', label: '💰 Stuff Payment'},
